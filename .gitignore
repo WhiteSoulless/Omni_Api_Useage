@@ -1,0 +1,27 @@
+## [Visual Studio / .NET GitIgnore]
+bin/
+obj/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+.vs/
+.idea/
+.vscode/
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# Sensitive data / Vault cache
+*.enc
+*.dat
+secrets.json
+appsettings.Development.json

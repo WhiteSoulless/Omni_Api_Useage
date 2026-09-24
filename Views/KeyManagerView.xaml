@@ -6,7 +6,7 @@
              xmlns:viewmodels="clr-namespace:OmniKeyStudio.ViewModels"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance Type=viewmodels:KeyManagerViewModel}"
-             d:DesignHeight="700" d:DesignWidth="900">
+             d:DesignHeight="720" d:DesignWidth="920">
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -15,33 +15,79 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <TextBlock Text="Akıllı API Anahtarı Dedektörü ve Kasası" 
                        FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-            <TextBlock Text="Herhangi bir AI sağlayıcısına ait anahtarı yapıştırın; formatı otomatik tespit edilir, doğrulanır ve Windows DPAPI ile güvenle şifrelenir."
+            <TextBlock Text="Herhangi bir AI sağlayıcısına ait anahtarı yapıştırın; formatı otomatik tespit edilir, dilediğiniz gibi seçilebilir veya doğrudan kaydedilebilir."
                        FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
         </StackPanel>
 
         <!-- Key Input & Auto-Detection Card -->
-        <Border Grid.Row="1" Style="{StaticResource ModernCard}" Margin="0,0,0,20">
+        <Border Grid.Row="1" Style="{StaticResource ModernCard}" Margin="0,0,0,16">
             <StackPanel>
-                <Grid Margin="0,0,0,12">
+                <Grid Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="API Anahtarı (Herhangi bir sağlayıcı):" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="Otomatik Algılama Devrede" Foreground="{StaticResource SuccessBrush}" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="API Anahtarınızı Buraya Yapıştırın:" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="Otomatik Analiz &amp; Seçim Devrede" Foreground="{StaticResource SuccessBrush}" FontSize="12" VerticalAlignment="Center"/>
                 </Grid>
 
                 <TextBox Style="{StaticResource ModernTextBox}" 
                          Text="{Binding InputKey, UpdateSourceTrigger=PropertyChanged}"
                          FontSize="14" Padding="12,10"
-                         Tag="Örn: gsk_..., AIzaSy..., sk-proj-..., sk-or-v1-..., sk-ant-..."
-                         ToolTip="OpenAI, Gemini, Claude, Groq, OpenRouter veya DeepSeek anahtarınızı buraya yapıştırın."/>
+                         Tag="Örn: AIzaSy..., gsk_..., sk-proj-..., sk-..., sk-or-v1-..., xai-..."
+                         ToolTip="OpenAI, Gemini, Claude, Groq, OpenRouter, DeepSeek veya xAI anahtarınızı buraya yapıştırın."/>
 
-                <!-- Optional Custom Base URL (Collapsible/Configurable) -->
-                <Grid Margin="0,12,0,0">
+                <!-- Provider Selector & Detection Card -->
+                <Border Style="{StaticResource ModernSubCard}" Margin="0,12,0,0" Background="#141721" BorderBrush="#3B425A" Padding="14">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Row 0: Provider Selector Dropdown & Auto Detection Badge -->
+                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Text="Hedef Sağlayıcı:" Foreground="{StaticResource TextPrimaryBrush}" 
+                                       FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Margin="0,0,12,0"/>
+
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding AllProviders}" 
+                                      SelectedItem="{Binding SelectedProvider}"
+                                      Height="34" Margin="0,0,15,0"
+                                      Background="{StaticResource SurfaceDarkBrush}"
+                                      Foreground="{StaticResource TextPrimaryBrush}"/>
+
+                            <Border Grid.Column="2" Background="#1B2236" CornerRadius="6" Padding="8,4" BorderThickness="1" BorderBrush="#2D3A5C" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Tespit: " Foreground="{StaticResource TextSecondaryBrush}" FontSize="11"/>
+                                    <TextBlock Text="{Binding DetectedProvider}" FontWeight="Bold" Foreground="{StaticResource PrimaryAccentBrush}" FontSize="11"/>
+                                    <TextBlock Text="{Binding DetectionConfidence, StringFormat=' ({0})'}" Foreground="{StaticResource InfoBrush}" FontSize="11"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Row 1: Reason and Explanation -->
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding DetectionReason}" Foreground="{StaticResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap"/>
+                            <TextBlock Grid.Column="1" Text="{Binding PatternMatch, StringFormat='Kalıp: {0}'}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="10,0,0,0"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- Optional Custom Base URL -->
+                <Grid Margin="0,10,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -52,56 +98,34 @@
                              ToolTip="Özel bir OpenAI-uyumlu sunucu veya yerel endpoint için (örn: http://localhost:11434/v1)"/>
                 </Grid>
 
-                <!-- Live Detection Analysis Result Box -->
-                <Border Style="{StaticResource ModernSubCard}" Margin="0,15,0,0" Background="#141721" BorderBrush="#3B425A">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Icon badge -->
-                        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8" Background="{StaticResource CardDarkBrush}" Margin="0,0,14,0">
-                            <TextBlock Text="🔍" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-
-                        <!-- Details -->
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Tespit Edilen Sağlayıcı: " Foreground="{StaticResource TextSecondaryBrush}" FontSize="13"/>
-                                <TextBlock Text="{Binding DetectedProvider}" FontWeight="Bold" Foreground="{StaticResource PrimaryAccentBrush}" FontSize="14"/>
-                                <Border Background="#2E364B" CornerRadius="4" Padding="6,2" Margin="10,0,0,0">
-                                    <TextBlock Text="{Binding DetectionConfidence, StringFormat='Güven: {0}'}" FontSize="11" Foreground="{StaticResource InfoBrush}"/>
-                                </Border>
-                            </StackPanel>
-                            <TextBlock Text="{Binding DetectionReason}" Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
-                        </StackPanel>
-
-                        <!-- Pattern Badge -->
-                        <Border Grid.Column="2" VerticalAlignment="Center" Background="#1B2236" CornerRadius="6" Padding="8,4" BorderThickness="1" BorderBrush="#2D3A5C">
-                            <TextBlock Text="{Binding PatternMatch, StringFormat='Kalıp: {0}'}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11"/>
-                        </Border>
-                    </Grid>
-                </Border>
-
-                <!-- Action Buttons & Progress -->
-                <Grid Margin="0,15,0,0">
+                <!-- Action Buttons & Status -->
+                <Grid Margin="0,14,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="{Binding ProbeStatus}" Foreground="{StaticResource InfoBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    <TextBlock Grid.Column="0" Text="{Binding ProbeStatus}" Foreground="{StaticResource InfoBrush}" 
+                               VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0"/>
 
                     <Button Grid.Column="1" Content="Temizle" Style="{StaticResource ModernSecondaryButton}" 
-                            Command="{Binding ClearInputCommand}" Margin="0,0,10,0"/>
+                            Command="{Binding ClearInputCommand}" Margin="0,0,8,0" Padding="12,8"/>
 
-                    <Button Grid.Column="2" Content="⚡ Doğrula, Modelleri Bul ve Kaydet" 
+                    <!-- Direct Save (Never fails) -->
+                    <Button Grid.Column="2" Content="💾 Doğrulamadan Kaydet" 
+                            Style="{StaticResource ModernSecondaryButton}"
+                            Command="{Binding SaveDirectlyCommand}"
+                            ToolTip="Ağ engeli veya kota sorgusu beklemeden anahtarı doğrudan kasaya ekler."
+                            Margin="0,0,8,0" Padding="14,8"/>
+
+                    <!-- Validate & Probe Online -->
+                    <Button Grid.Column="3" Content="⚡ Canlı Doğrula &amp; Kaydet" 
                             Style="{StaticResource ModernPrimaryButton}"
                             Command="{Binding ValidateAndSaveCommand}"
-                            IsEnabled="{Binding IsProbing, Converter={x:Null}}"/>
+                            IsEnabled="{Binding IsProbing, Converter={x:Null}}"
+                            Padding="16,8"/>
                 </Grid>
             </StackPanel>
         </Border>
@@ -119,7 +143,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Kayıtlı ve Doğrulanmış API Anahtarları (DPAPI Kasası)" 
+                    <TextBlock Text="Kayıtlı API Anahtarları (Windows DPAPI Kasası)" 
                                FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
                     <TextBlock Grid.Column="1" Text="{Binding SavedKeys.Count, StringFormat='Toplam {0} Anahtar'}" 
                                Foreground="{StaticResource TextSecondaryBrush}"/>
@@ -171,7 +195,7 @@
 
                                     <!-- Right: Actions -->
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button Content="Test Et" Style="{StaticResource ModernSecondaryButton}" 
+                                        <Button Content="Yeniden Test Et" Style="{StaticResource ModernSecondaryButton}" 
                                                 Padding="10,5" FontSize="12" Margin="0,0,8,0"
                                                 Command="{Binding DataContext.TestSelectedKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"/>

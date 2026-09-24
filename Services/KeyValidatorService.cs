@@ -17,73 +17,87 @@ public class ValidationResult
 
 public class KeyValidatorService
 {
-    private static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromSeconds(12) };
+    private static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-    public async Task<ValidationResult> ValidateAndProbeKeyAsync(string key, string? suggestedProvider = null, string? customBaseUrl = null)
+    public static List<string> GetDefaultModelsForProvider(string provider)
     {
+        return provider switch
+        {
+            "Google Gemini" => new List<string> { "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro" },
+            "Groq" => new List<string> { "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it" },
+            "OpenAI" => new List<string> { "gpt-4o", "gpt-4o-mini", "o1-mini", "gpt-4-turbo" },
+            "DeepSeek" => new List<string> { "deepseek-chat", "deepseek-reasoner" },
+            "OpenRouter" => new List<string> { "meta-llama/llama-3.3-70b-instruct:free", "google/gemini-2.0-flash-exp:free", "deepseek/deepseek-r1:free" },
+            "Anthropic Claude" => new List<string> { "claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022" },
+            "xAI (Grok)" => new List<string> { "grok-beta", "grok-2-latest" },
+            "Mistral AI" => new List<string> { "mistral-large-latest", "mistral-small-latest", "codestral-latest" },
+            "Perplexity AI" => new List<string> { "sonar", "sonar-pro", "sonar-reasoning" },
+            "Cerebras" => new List<string> { "llama3.1-70b", "llama3.1-8b" },
+            _ => new List<string> { "default-model" }
+        };
+    }
+
+    public async Task<ValidationResult> ValidateAndProbeKeyAsync(string rawKey, string? selectedProvider = null, string? customBaseUrl = null)
+    {
+        string key = KeyDetectorService.CleanKey(rawKey);
+
         if (string.IsNullOrWhiteSpace(key))
         {
             return new ValidationResult { IsSuccess = false, Message = "API anahtarı boş olamaz." };
         }
 
-        string trimmedKey = key.Trim();
-
         // If user specified custom base URL
         if (!string.IsNullOrWhiteSpace(customBaseUrl))
         {
-            return await ProbeOpenAiCompatibleAsync(trimmedKey, customBaseUrl.TrimEnd('/'), "Özel API");
+            return await ProbeOpenAiCompatibleAsync(key, customBaseUrl.TrimEnd('/'), selectedProvider ?? "Özel API");
         }
 
-        // If provider is already detected with high confidence, test that provider first
-        if (!string.IsNullOrWhiteSpace(suggestedProvider) && suggestedProvider != "OpenAI / DeepSeek" && suggestedProvider != "Özel / Tanımlanamadı")
+        // If provider is specified or selected by user, test that specific provider first!
+        if (!string.IsNullOrWhiteSpace(selectedProvider) && selectedProvider != "Özel / Custom" && selectedProvider != "Henüz anahtar girilmedi")
         {
-            var directResult = await ProbeSpecificProviderAsync(suggestedProvider, trimmedKey);
+            var directResult = await ProbeSpecificProviderAsync(selectedProvider, key);
             if (directResult.IsSuccess)
             {
                 return directResult;
             }
+
+            // If direct result gave specific quota error (429), it means the key is valid but out of quota!
+            if (directResult.Message.Contains("429") || directResult.Message.Contains("kota") || directResult.Message.Contains("quota"))
+            {
+                directResult.IsSuccess = true;
+                directResult.DiscoveredModels = GetDefaultModelsForProvider(selectedProvider);
+                directResult.Message = $"{selectedProvider} anahtarı geçerli ancak geçici olarak kota limitine ulaştı (HTTP 429).";
+                return directResult;
+            }
         }
 
-        // If it's a generic "sk-..." or direct validation failed, probe candidate providers in parallel
-        var probeTasks = new List<Task<ValidationResult>>
-        {
-            ProbeOpenAiAsync(trimmedKey),
-            ProbeGroqAsync(trimmedKey),
-            ProbeDeepSeekAsync(trimmedKey),
-            ProbeOpenRouterAsync(trimmedKey),
-            ProbeGeminiAsync(trimmedKey),
-            ProbeAnthropicAsync(trimmedKey),
-            ProbeMistralAsync(trimmedKey)
-        };
+        // Multi-candidate fallback probing
+        var candidates = new List<string> { "Google Gemini", "Groq", "DeepSeek", "OpenAI", "OpenRouter", "Anthropic Claude", "xAI (Grok)", "Mistral AI" };
 
-        while (probeTasks.Count > 0)
+        foreach (var candidate in candidates)
         {
-            var finishedTask = await Task.WhenAny(probeTasks);
-            probeTasks.Remove(finishedTask);
-
             try
             {
-                var res = await finishedTask;
+                var res = await ProbeSpecificProviderAsync(candidate, key);
                 if (res.IsSuccess)
                 {
                     return res;
                 }
             }
-            catch
-            {
-                // Continue probing other candidates
-            }
+            catch { }
         }
 
+        string fallbackProvider = !string.IsNullOrWhiteSpace(selectedProvider) ? selectedProvider : "Özel / Custom";
         return new ValidationResult
         {
             IsSuccess = false,
-            DetectedProvider = suggestedProvider ?? "Bilinmeyen",
-            Message = "Anahtar test edildi ancak hiçbir servis tarafından yetkilendirilmedi (Yetkisiz / Hatalı Anahtar)."
+            DetectedProvider = fallbackProvider,
+            DiscoveredModels = GetDefaultModelsForProvider(fallbackProvider),
+            Message = "Canlı sunucu doğrulaması tamamlanamadı (Ağ engeli, yanlış anahtar veya geçici kota sorunu). Sağlayıcıyı açılır listeden seçip 'Doğrulamadan Kaydet' butonuna basarak doğrudan ekleyebilirsiniz."
         };
     }
 
-    private async Task<ValidationResult> ProbeSpecificProviderAsync(string provider, string key)
+    public async Task<ValidationResult> ProbeSpecificProviderAsync(string provider, string key)
     {
         return provider switch
         {
@@ -93,7 +107,9 @@ public class KeyValidatorService
             "Anthropic Claude" => await ProbeAnthropicAsync(key),
             "OpenAI" => await ProbeOpenAiAsync(key),
             "DeepSeek" => await ProbeDeepSeekAsync(key),
+            "xAI (Grok)" => await ProbeXAiAsync(key),
             "Mistral AI" => await ProbeMistralAsync(key),
+            "Perplexity AI" => await ProbePerplexityAsync(key),
             _ => await ProbeOpenAiCompatibleAsync(key, "https://api.openai.com/v1", provider)
         };
     }
@@ -108,19 +124,36 @@ public class KeyValidatorService
             {
                 var content = await response.Content.ReadAsStringAsync();
                 var models = ExtractGeminiModels(content);
+                if (models.Count == 0) models = GetDefaultModelsForProvider("Google Gemini");
+
                 return new ValidationResult
                 {
                     IsSuccess = true,
                     DetectedProvider = "Google Gemini",
-                    Message = $"Doğrulandı! Google Gemini AI Studio erişimi aktif. {models.Count} model listelendi.",
+                    Message = $"Doğrulandı! Google AI Studio erişimi aktif. {models.Count} model listelendi.",
                     DiscoveredModels = models
                 };
             }
-            return new ValidationResult { IsSuccess = false, DetectedProvider = "Google Gemini", Message = $"Gemini Hatası: HTTP {response.StatusCode}" };
+
+            int code = (int)response.StatusCode;
+            string err = await response.Content.ReadAsStringAsync();
+            return new ValidationResult 
+            { 
+                IsSuccess = false, 
+                DetectedProvider = "Google Gemini", 
+                Message = $"Google Gemini yanıtı: HTTP {code} ({GetHttpReason(code, err)})",
+                DiscoveredModels = GetDefaultModelsForProvider("Google Gemini")
+            };
         }
         catch (Exception ex)
         {
-            return new ValidationResult { IsSuccess = false, DetectedProvider = "Google Gemini", Message = ex.Message };
+            return new ValidationResult 
+            { 
+                IsSuccess = false, 
+                DetectedProvider = "Google Gemini", 
+                Message = $"Gemini bağlantı hatası: {ex.Message}",
+                DiscoveredModels = GetDefaultModelsForProvider("Google Gemini")
+            };
         }
     }
 
@@ -136,19 +169,22 @@ public class KeyValidatorService
             {
                 var content = await response.Content.ReadAsStringAsync();
                 var models = ExtractOpenAiModels(content);
+                if (models.Count == 0) models = GetDefaultModelsForProvider("Groq");
+
                 return new ValidationResult
                 {
                     IsSuccess = true,
                     DetectedProvider = "Groq",
-                    Message = $"Doğrulandı! Groq LPU Cloud aktif (Ultra Hızlı Llama 3 / Mixtral). {models.Count} model bulundu.",
+                    Message = $"Doğrulandı! Groq LPU Cloud aktif (Ultra Hızlı). {models.Count} model bulundu.",
                     DiscoveredModels = models
                 };
             }
-            return new ValidationResult { IsSuccess = false, DetectedProvider = "Groq", Message = $"Groq HTTP {response.StatusCode}" };
+            int code = (int)response.StatusCode;
+            return new ValidationResult { IsSuccess = false, DetectedProvider = "Groq", Message = $"Groq HTTP {code}", DiscoveredModels = GetDefaultModelsForProvider("Groq") };
         }
         catch (Exception ex)
         {
-            return new ValidationResult { IsSuccess = false, DetectedProvider = "Groq", Message = ex.Message };
+            return new ValidationResult { IsSuccess = false, DetectedProvider = "Groq", Message = ex.Message, DiscoveredModels = GetDefaultModelsForProvider("Groq") };
         }
     }
 
@@ -164,6 +200,8 @@ public class KeyValidatorService
             {
                 var content = await response.Content.ReadAsStringAsync();
                 var models = ExtractOpenAiModels(content);
+                if (models.Count == 0) models = GetDefaultModelsForProvider("OpenRouter");
+
                 return new ValidationResult
                 {
                     IsSuccess = true,
@@ -172,11 +210,12 @@ public class KeyValidatorService
                     DiscoveredModels = models
                 };
             }
-            return new ValidationResult { IsSuccess = false, DetectedProvider = "OpenRouter", Message = $"OpenRouter HTTP {response.StatusCode}" };
+            int code = (int)response.StatusCode;
+            return new ValidationResult { IsSuccess = false, DetectedProvider = "OpenRouter", Message = $"OpenRouter HTTP {code}", DiscoveredModels = GetDefaultModelsForProvider("OpenRouter") };
         }
         catch (Exception ex)
         {
-            return new ValidationResult { IsSuccess = false, DetectedProvider = "OpenRouter", Message = ex.Message };
+            return new ValidationResult { IsSuccess = false, DetectedProvider = "OpenRouter", Message = ex.Message, DiscoveredModels = GetDefaultModelsForProvider("OpenRouter") };
         }
     }
 
@@ -187,12 +226,25 @@ public class KeyValidatorService
 
     public async Task<ValidationResult> ProbeDeepSeekAsync(string key)
     {
+        // Try v1/models first, then models
+        var res1 = await ProbeOpenAiCompatibleAsync(key, "https://api.deepseek.com/v1", "DeepSeek");
+        if (res1.IsSuccess) return res1;
         return await ProbeOpenAiCompatibleAsync(key, "https://api.deepseek.com", "DeepSeek");
+    }
+
+    public async Task<ValidationResult> ProbeXAiAsync(string key)
+    {
+        return await ProbeOpenAiCompatibleAsync(key, "https://api.x.ai/v1", "xAI (Grok)");
     }
 
     public async Task<ValidationResult> ProbeMistralAsync(string key)
     {
         return await ProbeOpenAiCompatibleAsync(key, "https://api.mistral.ai/v1", "Mistral AI");
+    }
+
+    public async Task<ValidationResult> ProbePerplexityAsync(string key)
+    {
+        return await ProbeOpenAiCompatibleAsync(key, "https://api.perplexity.ai", "Perplexity AI");
     }
 
     public async Task<ValidationResult> ProbeAnthropicAsync(string key)
@@ -208,6 +260,8 @@ public class KeyValidatorService
             {
                 var content = await response.Content.ReadAsStringAsync();
                 var models = ExtractAnthropicModels(content);
+                if (models.Count == 0) models = GetDefaultModelsForProvider("Anthropic Claude");
+
                 return new ValidationResult
                 {
                     IsSuccess = true,
@@ -216,11 +270,12 @@ public class KeyValidatorService
                     DiscoveredModels = models
                 };
             }
-            return new ValidationResult { IsSuccess = false, DetectedProvider = "Anthropic Claude", Message = $"Anthropic HTTP {response.StatusCode}" };
+            int code = (int)response.StatusCode;
+            return new ValidationResult { IsSuccess = false, DetectedProvider = "Anthropic Claude", Message = $"Anthropic HTTP {code}", DiscoveredModels = GetDefaultModelsForProvider("Anthropic Claude") };
         }
         catch (Exception ex)
         {
-            return new ValidationResult { IsSuccess = false, DetectedProvider = "Anthropic Claude", Message = ex.Message };
+            return new ValidationResult { IsSuccess = false, DetectedProvider = "Anthropic Claude", Message = ex.Message, DiscoveredModels = GetDefaultModelsForProvider("Anthropic Claude") };
         }
     }
 
@@ -237,6 +292,8 @@ public class KeyValidatorService
             {
                 var content = await response.Content.ReadAsStringAsync();
                 var models = ExtractOpenAiModels(content);
+                if (models.Count == 0) models = GetDefaultModelsForProvider(providerName);
+
                 return new ValidationResult
                 {
                     IsSuccess = true,
@@ -245,12 +302,49 @@ public class KeyValidatorService
                     DiscoveredModels = models
                 };
             }
-            return new ValidationResult { IsSuccess = false, DetectedProvider = providerName, Message = $"{providerName} HTTP {response.StatusCode}" };
+
+            int code = (int)response.StatusCode;
+            string err = await response.Content.ReadAsStringAsync();
+
+            // If 429 quota reached, key is still valid!
+            if (code == 429)
+            {
+                return new ValidationResult
+                {
+                    IsSuccess = true,
+                    DetectedProvider = providerName,
+                    Message = $"{providerName} anahtarı geçerli (Kota sınırı / HTTP 429).",
+                    DiscoveredModels = GetDefaultModelsForProvider(providerName)
+                };
+            }
+
+            return new ValidationResult 
+            { 
+                IsSuccess = false, 
+                DetectedProvider = providerName, 
+                Message = $"{providerName} HTTP {code}: {GetHttpReason(code, err)}",
+                DiscoveredModels = GetDefaultModelsForProvider(providerName)
+            };
         }
         catch (Exception ex)
         {
-            return new ValidationResult { IsSuccess = false, DetectedProvider = providerName, Message = ex.Message };
+            return new ValidationResult 
+            { 
+                IsSuccess = false, 
+                DetectedProvider = providerName, 
+                Message = $"{providerName} bağlantı hatası: {ex.Message}",
+                DiscoveredModels = GetDefaultModelsForProvider(providerName)
+            };
         }
+    }
+
+    private static string GetHttpReason(int statusCode, string body)
+    {
+        if (statusCode == 401) return "Yetkisiz Erişim / Geçersiz Anahtar";
+        if (statusCode == 403) return "Erişim Reddedildi / İzin Yetersiz";
+        if (statusCode == 429) return "Kota veya Hız Sınırı Aşıldı";
+        if (statusCode == 404) return "Endpoint Bulunamadı";
+        return body.Length > 80 ? body[..80] + "..." : body;
     }
 
     private static List<string> ExtractOpenAiModels(string json)
@@ -265,7 +359,8 @@ public class KeyValidatorService
                 {
                     if (item.TryGetProperty("id", out var id))
                     {
-                        list.Add(id.GetString() ?? string.Empty);
+                        string? modelId = id.GetString();
+                        if (!string.IsNullOrWhiteSpace(modelId)) list.Add(modelId);
                     }
                 }
             }
@@ -309,7 +404,8 @@ public class KeyValidatorService
                 {
                     if (item.TryGetProperty("id", out var id))
                     {
-                        list.Add(id.GetString() ?? string.Empty);
+                        string? modelId = id.GetString();
+                        if (!string.IsNullOrWhiteSpace(modelId)) list.Add(modelId);
                     }
                 }
             }

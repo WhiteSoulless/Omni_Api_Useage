@@ -25,6 +25,9 @@ public partial class KeyManagerViewModel : ObservableObject
     private string _detectedProvider = "Henüz anahtar girilmedi";
 
     [ObservableProperty]
+    private string _selectedProvider = "Google Gemini";
+
+    [ObservableProperty]
     private string _detectionConfidence = "-";
 
     [ObservableProperty]
@@ -41,6 +44,24 @@ public partial class KeyManagerViewModel : ObservableObject
 
     [ObservableProperty]
     private ApiKeyEntry? _selectedKey;
+
+    public ObservableCollection<string> AllProviders { get; } = new()
+    {
+        "Google Gemini",
+        "Groq",
+        "OpenAI",
+        "DeepSeek",
+        "OpenRouter",
+        "Anthropic Claude",
+        "xAI (Grok)",
+        "Mistral AI",
+        "Perplexity AI",
+        "Cerebras",
+        "Hugging Face",
+        "GitHub Models",
+        "Yerel Ollama",
+        "Özel / Custom"
+    };
 
     public ObservableCollection<ApiKeyEntry> SavedKeys { get; } = new();
 
@@ -70,7 +91,9 @@ public partial class KeyManagerViewModel : ObservableObject
 
     partial void OnInputKeyChanged(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        string clean = KeyDetectorService.CleanKey(value);
+
+        if (string.IsNullOrWhiteSpace(clean))
         {
             DetectedProvider = "Henüz anahtar girilmedi";
             DetectionConfidence = "-";
@@ -79,13 +102,35 @@ public partial class KeyManagerViewModel : ObservableObject
             return;
         }
 
-        var result = _detectorService.DetectProvider(value);
+        var result = _detectorService.DetectProvider(clean);
         DetectedProvider = result.CandidateProvider;
         DetectionConfidence = result.ConfidencePercentage;
         DetectionReason = result.Reason;
         PatternMatch = result.PatternMatch;
 
-        if (result.CandidateProvider.Contains("Ollama") || result.CandidateProvider.Contains("Özel"))
+        // Auto-select in dropdown if known
+        if (AllProviders.Contains(result.CandidateProvider))
+        {
+            SelectedProvider = result.CandidateProvider;
+        }
+        else if (result.CandidateProvider.Contains("Gemini"))
+        {
+            SelectedProvider = "Google Gemini";
+        }
+        else if (result.CandidateProvider.Contains("Groq"))
+        {
+            SelectedProvider = "Groq";
+        }
+        else if (result.CandidateProvider.Contains("DeepSeek"))
+        {
+            SelectedProvider = "DeepSeek";
+        }
+        else if (result.CandidateProvider.Contains("OpenAI"))
+        {
+            SelectedProvider = "OpenAI";
+        }
+
+        if (SelectedProvider.Contains("Ollama") || SelectedProvider.Contains("Özel"))
         {
             if (string.IsNullOrWhiteSpace(CustomBaseUrl))
             {
@@ -97,66 +142,89 @@ public partial class KeyManagerViewModel : ObservableObject
     [RelayCommand]
     private async Task ValidateAndSaveAsync()
     {
-        if (string.IsNullOrWhiteSpace(InputKey))
+        string cleanKey = KeyDetectorService.CleanKey(InputKey);
+        if (string.IsNullOrWhiteSpace(cleanKey))
         {
             ProbeStatus = "Lütfen bir API anahtarı girin.";
             return;
         }
 
         IsProbing = true;
-        ProbeStatus = "Anahtar test ediliyor ve modeller taranıyor...";
+        ProbeStatus = $"{SelectedProvider} anahtarı canlı test ediliyor ve modeller taranıyor...";
 
         try
         {
-            var result = await _validatorService.ValidateAndProbeKeyAsync(InputKey, DetectedProvider, CustomBaseUrl);
+            var result = await _validatorService.ValidateAndProbeKeyAsync(cleanKey, SelectedProvider, CustomBaseUrl);
             IsProbing = false;
 
             if (result.IsSuccess)
             {
                 ProbeStatus = $"Başarılı! {result.Message}";
-
-                // Check if existing
-                var existing = SavedKeys.FirstOrDefault(k => k.Key == InputKey.Trim());
-                if (existing != null)
-                {
-                    existing.Provider = result.DetectedProvider;
-                    existing.IsValid = true;
-                    existing.LastValidated = DateTime.Now;
-                    existing.StatusMessage = result.Message;
-                    existing.DiscoveredModels = result.DiscoveredModels;
-                    existing.CustomBaseUrl = CustomBaseUrl;
-                }
-                else
-                {
-                    var newEntry = new ApiKeyEntry
-                    {
-                        Key = InputKey.Trim(),
-                        Provider = result.DetectedProvider,
-                        IsValid = true,
-                        LastValidated = DateTime.Now,
-                        StatusMessage = result.Message,
-                        DiscoveredModels = result.DiscoveredModels,
-                        CustomBaseUrl = CustomBaseUrl
-                    };
-                    SavedKeys.Insert(0, newEntry);
-                }
-
-                _storageService.SaveKeys(SavedKeys.ToList());
-                OnKeysChanged?.Invoke();
-
+                SaveKeyEntry(cleanKey, result.DetectedProvider, true, result.Message, result.DiscoveredModels);
                 InputKey = string.Empty;
                 CustomBaseUrl = string.Empty;
             }
             else
             {
-                ProbeStatus = $"Doğrulama Başarısız: {result.Message}";
+                ProbeStatus = $"⚠️ Doğrulama Uyarısı: {result.Message}\n💡 Not: Anahtarınızın doğru olduğundan eminseniz aşağıdaki '💾 Doğrulamadan Kaydet' butonu ile doğrudan ekleyebilirsiniz.";
             }
         }
         catch (Exception ex)
         {
             IsProbing = false;
-            ProbeStatus = $"Hata oluştu: {ex.Message}";
+            ProbeStatus = $"Bağlantı hatası: {ex.Message}. '💾 Doğrulamadan Kaydet' butonu ile anahtarı yine de ekleyebilirsiniz.";
         }
+    }
+
+    [RelayCommand]
+    private void SaveDirectly()
+    {
+        string cleanKey = KeyDetectorService.CleanKey(InputKey);
+        if (string.IsNullOrWhiteSpace(cleanKey))
+        {
+            ProbeStatus = "Lütfen bir API anahtarı girin.";
+            return;
+        }
+
+        string provider = !string.IsNullOrWhiteSpace(SelectedProvider) ? SelectedProvider : "Özel / Custom";
+        var defaultModels = KeyValidatorService.GetDefaultModelsForProvider(provider);
+
+        SaveKeyEntry(cleanKey, provider, true, "Kullanıcı tarafından doğrudan eklendi", defaultModels);
+        ProbeStatus = $"✅ {provider} anahtarı başarıyla kasaya eklendi ({defaultModels.Count} model hazır).";
+
+        InputKey = string.Empty;
+        CustomBaseUrl = string.Empty;
+    }
+
+    private void SaveKeyEntry(string key, string provider, bool isValid, string message, System.Collections.Generic.List<string> models)
+    {
+        var existing = SavedKeys.FirstOrDefault(k => k.Key == key);
+        if (existing != null)
+        {
+            existing.Provider = provider;
+            existing.IsValid = isValid;
+            existing.LastValidated = DateTime.Now;
+            existing.StatusMessage = message;
+            existing.DiscoveredModels = models;
+            existing.CustomBaseUrl = CustomBaseUrl;
+        }
+        else
+        {
+            var newEntry = new ApiKeyEntry
+            {
+                Key = key,
+                Provider = provider,
+                IsValid = isValid,
+                LastValidated = DateTime.Now,
+                StatusMessage = message,
+                DiscoveredModels = models,
+                CustomBaseUrl = CustomBaseUrl
+            };
+            SavedKeys.Insert(0, newEntry);
+        }
+
+        _storageService.SaveKeys(SavedKeys.ToList());
+        OnKeysChanged?.Invoke();
     }
 
     [RelayCommand]

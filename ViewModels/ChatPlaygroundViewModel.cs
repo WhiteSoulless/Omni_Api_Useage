@@ -93,6 +93,20 @@ public partial class ChatPlaygroundViewModel : ObservableObject
                 AvailableModels.Add(new ModelOption { ModelId = "claude-3-5-sonnet-20241022", DisplayName = "Claude 3.5 Sonnet", Provider = "Anthropic Claude", ApiKey = keyEntry.Key, SpeedTag = "🧠 Çok Zeki", IsFree = false });
                 AvailableModels.Add(new ModelOption { ModelId = "claude-3-5-haiku-20241022", DisplayName = "Claude 3.5 Haiku", Provider = "Anthropic Claude", ApiKey = keyEntry.Key, SpeedTag = "⚡ Ultra Hızlı", IsFree = false });
             }
+            else if (keyEntry.Provider == "xAI (Grok)")
+            {
+                AvailableModels.Add(new ModelOption { ModelId = "grok-beta", DisplayName = "Grok Beta", Provider = "xAI (Grok)", ApiKey = keyEntry.Key, SpeedTag = "🚀 Hızlı", IsFree = false });
+                AvailableModels.Add(new ModelOption { ModelId = "grok-2-latest", DisplayName = "Grok 2", Provider = "xAI (Grok)", ApiKey = keyEntry.Key, SpeedTag = "🧠 Akıl Yürütme", IsFree = false });
+            }
+            else if (keyEntry.Provider == "Mistral AI")
+            {
+                AvailableModels.Add(new ModelOption { ModelId = "mistral-large-latest", DisplayName = "Mistral Large", Provider = "Mistral AI", ApiKey = keyEntry.Key, SpeedTag = "🚀 Güçlü", IsFree = false });
+                AvailableModels.Add(new ModelOption { ModelId = "codestral-latest", DisplayName = "Codestral (Kod Uzmanı)", Provider = "Mistral AI", ApiKey = keyEntry.Key, SpeedTag = "⚡ Hızlı Kodlama", IsFree = false });
+            }
+            else if (keyEntry.Provider == "Perplexity AI")
+            {
+                AvailableModels.Add(new ModelOption { ModelId = "sonar", DisplayName = "Sonar (Web Arama)", Provider = "Perplexity AI", ApiKey = keyEntry.Key, SpeedTag = "🌐 Arama Destekli", IsFree = false });
+            }
             else if (!string.IsNullOrWhiteSpace(keyEntry.CustomBaseUrl))
             {
                 AvailableModels.Add(new ModelOption { ModelId = "default", DisplayName = $"{keyEntry.Provider} Model", Provider = keyEntry.Provider, ApiKey = keyEntry.Key, CustomBaseUrl = keyEntry.CustomBaseUrl, SpeedTag = "Özel", IsFree = false });

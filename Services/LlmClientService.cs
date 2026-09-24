@@ -32,6 +32,12 @@ public class LlmClientService
         string? customBaseUrl = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            yield return $"[Hata]: '{provider}' ({model}) için bir API anahtarı girilmedi. Lütfen üstteki kutudan veya 'Anahtar Kasası'ndan bir API anahtarı ekleyin.";
+            yield break;
+        }
+
         if (string.Equals(provider, "Google Gemini", StringComparison.OrdinalIgnoreCase))
         {
             await foreach (var chunk in StreamGeminiAsync(apiKey, model, conversationHistory, systemPrompt, cancellationToken))
@@ -82,6 +88,12 @@ public class LlmClientService
         string systemPrompt,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            yield return $"[Hata]: '{model}' modeli için API anahtarı boş. Lütfen anahtarınızı ekleyin.";
+            yield break;
+        }
+
         string endpoint = $"{baseUrl}/chat/completions";
 
         var messages = new List<object>();
@@ -109,10 +121,7 @@ public class LlmClientService
             Content = new StringContent(requestJson, Encoding.UTF8, "application/json")
         };
 
-        if (!string.IsNullOrWhiteSpace(apiKey))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-        }
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
         if (baseUrl.Contains("openrouter.ai"))
         {
@@ -124,7 +133,14 @@ public class LlmClientService
         if (!response.IsSuccessStatusCode)
         {
             string err = await response.Content.ReadAsStringAsync(cancellationToken);
-            yield return $"[Hata HTTP {(int)response.StatusCode}]: {err}";
+            string friendlyMsg = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Unauthorized => $"[Hata HTTP 401 - Yetkilendirme Hatası]: API anahtarı eksik, geçersiz veya bu modele yetkisiz. Sağlayıcı: {baseUrl}\n{err}",
+                System.Net.HttpStatusCode.Forbidden => $"[Hata HTTP 403 - Erişim Engeli]: Bu modele erişim izniniz bulunmuyor.\n{err}",
+                System.Net.HttpStatusCode.TooManyRequests => $"[Hata HTTP 429 - Kota / Hız Sınırı]: İstek limiti veya bakiye kotası doldu.\n{err}",
+                _ => $"[Hata HTTP {(int)response.StatusCode}]: {err}"
+            };
+            yield return friendlyMsg;
             yield break;
         }
 
@@ -171,8 +187,14 @@ public class LlmClientService
         string systemPrompt,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            yield return "[Hata]: Google Gemini için API anahtarı boş. Lütfen geçerli bir Gemini anahtarı ekleyin.";
+            yield break;
+        }
+
         string cleanModel = model.StartsWith("models/") ? model["models/".Length..] : model;
-        string endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{cleanModel}:streamGenerateContent?key={apiKey}&alt=sse";
+        string endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{cleanModel}:streamGenerateContent?key={Uri.EscapeDataString(apiKey)}&alt=sse";
 
         var contents = new List<object>();
 
@@ -205,12 +227,21 @@ public class LlmClientService
         {
             Content = new StringContent(requestJson, Encoding.UTF8, "application/json")
         };
+        request.Headers.Add("x-goog-api-key", apiKey);
 
         using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             string err = await response.Content.ReadAsStringAsync(cancellationToken);
-            yield return $"[Gemini Hatası HTTP {(int)response.StatusCode}]: {err}";
+            string friendlyMsg = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.BadRequest => $"[Gemini Hatası HTTP 400 - Geçersiz İstek]: {err}",
+                System.Net.HttpStatusCode.Unauthorized => $"[Gemini Hatası HTTP 401 - Yetkisiz]: API anahtarı geçersiz veya yetkisiz.\n{err}",
+                System.Net.HttpStatusCode.Forbidden => $"[Gemini Hatası HTTP 403 - İzin Yok]: Bu model için erişim yetkiniz bulunmuyor.\n{err}",
+                System.Net.HttpStatusCode.TooManyRequests => $"[Gemini Hatası HTTP 429 - Kota Limiti]: Gemini ücretsiz kota sınırına ulaştınız. Lütfen kısa süre sonra tekrar deneyin.\n{err}",
+                _ => $"[Gemini Hatası HTTP {(int)response.StatusCode}]: {err}"
+            };
+            yield return friendlyMsg;
             yield break;
         }
 
@@ -255,6 +286,12 @@ public class LlmClientService
         string systemPrompt,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            yield return "[Hata]: Anthropic Claude için API anahtarı boş. Lütfen geçerli bir Claude anahtarı ekleyin.";
+            yield break;
+        }
+
         string endpoint = "https://api.anthropic.com/v1/messages";
 
         var messages = new List<object>();
@@ -285,7 +322,14 @@ public class LlmClientService
         if (!response.IsSuccessStatusCode)
         {
             string err = await response.Content.ReadAsStringAsync(cancellationToken);
-            yield return $"[Claude Hatası HTTP {(int)response.StatusCode}]: {err}";
+            string friendlyMsg = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Unauthorized => $"[Claude Hatası HTTP 401 - Yetkisiz]: API anahtarı geçersiz veya yetkisiz.\n{err}",
+                System.Net.HttpStatusCode.Forbidden => $"[Claude Hatası HTTP 403 - Erişim Reddedildi]: İzin yetersiz.\n{err}",
+                System.Net.HttpStatusCode.TooManyRequests => $"[Claude Hatası HTTP 429 - Hız Sınırı]: İstek kotası doldu.\n{err}",
+                _ => $"[Claude Hatası HTTP {(int)response.StatusCode}]: {err}"
+            };
+            yield return friendlyMsg;
             yield break;
         }
 

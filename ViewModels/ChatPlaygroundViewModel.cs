@@ -70,21 +70,63 @@ public partial class ChatPlaygroundViewModel : ObservableObject
         RefreshModels();
     }
 
+    public static string FindKeyForProvider(IEnumerable<ApiKeyEntry> keys, string provider)
+    {
+        if (keys == null || string.IsNullOrWhiteSpace(provider)) return string.Empty;
+
+        var validKeys = keys.Where(k => !string.IsNullOrWhiteSpace(k.Key)).ToList();
+        if (validKeys.Count == 0) return string.Empty;
+
+        // 1. Direct provider match
+        var match = validKeys.FirstOrDefault(k => string.Equals(k.Provider, provider, StringComparison.OrdinalIgnoreCase));
+        if (match != null) return match.Key;
+
+        // 2. Specific key prefix matching
+        if (provider.Contains("Gemini", StringComparison.OrdinalIgnoreCase))
+        {
+            var gemKey = validKeys.FirstOrDefault(k => k.Key.StartsWith("AQ.") || k.Key.StartsWith("AIzaSy"));
+            if (gemKey != null) return gemKey.Key;
+        }
+        if (provider.Contains("Groq", StringComparison.OrdinalIgnoreCase))
+        {
+            var groqKey = validKeys.FirstOrDefault(k => k.Key.StartsWith("gsk_"));
+            if (groqKey != null) return groqKey.Key;
+        }
+        if (provider.Contains("OpenRouter", StringComparison.OrdinalIgnoreCase))
+        {
+            var orKey = validKeys.FirstOrDefault(k => k.Key.StartsWith("sk-or-"));
+            if (orKey != null) return orKey.Key;
+        }
+        if (provider.Contains("Anthropic", StringComparison.OrdinalIgnoreCase) || provider.Contains("Claude", StringComparison.OrdinalIgnoreCase))
+        {
+            var antKey = validKeys.FirstOrDefault(k => k.Key.StartsWith("sk-ant-"));
+            if (antKey != null) return antKey.Key;
+        }
+
+        // 3. Partial provider name match
+        match = validKeys.FirstOrDefault(k => 
+            k.Provider.Contains(provider, StringComparison.OrdinalIgnoreCase) || 
+            provider.Contains(k.Provider, StringComparison.OrdinalIgnoreCase));
+        if (match != null) return match.Key;
+
+        return string.Empty;
+    }
+
     public void RefreshModels(string? preferredProvider = null)
     {
         AvailableModels.Clear();
         var keys = _storageService.LoadKeys();
 
-        // 1. Gather keys map
-        var groqKey = keys.FirstOrDefault(k => k.Provider == "Groq")?.Key ?? "";
-        var geminiKey = keys.FirstOrDefault(k => k.Provider == "Google Gemini")?.Key ?? "";
-        var openRouterKey = keys.FirstOrDefault(k => k.Provider == "OpenRouter")?.Key ?? "";
-        var openAiKey = keys.FirstOrDefault(k => k.Provider == "OpenAI")?.Key ?? "";
-        var deepSeekKey = keys.FirstOrDefault(k => k.Provider == "DeepSeek")?.Key ?? "";
-        var claudeKey = keys.FirstOrDefault(k => k.Provider == "Anthropic Claude")?.Key ?? "";
-        var xAiKey = keys.FirstOrDefault(k => k.Provider == "xAI (Grok)")?.Key ?? "";
-        var mistralKey = keys.FirstOrDefault(k => k.Provider == "Mistral AI")?.Key ?? "";
-        var perplexityKey = keys.FirstOrDefault(k => k.Provider == "Perplexity AI")?.Key ?? "";
+        // 1. Gather keys map with robust matching
+        var groqKey = FindKeyForProvider(keys, "Groq");
+        var geminiKey = FindKeyForProvider(keys, "Google Gemini");
+        var openRouterKey = FindKeyForProvider(keys, "OpenRouter");
+        var openAiKey = FindKeyForProvider(keys, "OpenAI");
+        var deepSeekKey = FindKeyForProvider(keys, "DeepSeek");
+        var claudeKey = FindKeyForProvider(keys, "Anthropic Claude");
+        var xAiKey = FindKeyForProvider(keys, "xAI (Grok)");
+        var mistralKey = FindKeyForProvider(keys, "Mistral AI");
+        var perplexityKey = FindKeyForProvider(keys, "Perplexity AI");
 
         var allList = new List<ModelOption>();
 
@@ -107,9 +149,9 @@ public partial class ChatPlaygroundViewModel : ObservableObject
         allList.Add(new ModelOption { ModelId = "gpt-4o-mini", DisplayName = "GPT-4o Mini", Provider = "OpenAI", ApiKey = openAiKey, SpeedTag = "⚡ Çok Hızlı", IsFree = false });
 
         // OpenRouter Free
-        allList.Add(new ModelOption { ModelId = "meta-llama/llama-3.3-70b-instruct:free", DisplayName = "Llama 3.3 70B (Free)", Provider = "OpenRouter", ApiKey = openRouterKey, SpeedTag = "★ Tamamen Ücretsiz", IsFree = true });
-        allList.Add(new ModelOption { ModelId = "deepseek/deepseek-r1:free", DisplayName = "DeepSeek R1 (Free)", Provider = "OpenRouter", ApiKey = openRouterKey, SpeedTag = "★ Tamamen Ücretsiz", IsFree = true });
-        allList.Add(new ModelOption { ModelId = "google/gemini-2.0-flash-exp:free", DisplayName = "Gemini 2.0 Flash (Free)", Provider = "OpenRouter", ApiKey = openRouterKey, SpeedTag = "★ Tamamen Ücretsiz", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "meta-llama/llama-3.3-70b-instruct:free", DisplayName = "Llama 3.3 70B (Free)", Provider = "OpenRouter", ApiKey = openRouterKey, SpeedTag = "★ 0$ Model (OpenRouter Anahtarı Gerekir)", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "deepseek/deepseek-r1:free", DisplayName = "DeepSeek R1 (Free)", Provider = "OpenRouter", ApiKey = openRouterKey, SpeedTag = "★ 0$ Model (OpenRouter Anahtarı Gerekir)", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "google/gemini-2.0-flash-exp:free", DisplayName = "Gemini 2.0 Flash (Free)", Provider = "OpenRouter", ApiKey = openRouterKey, SpeedTag = "★ 0$ Model (OpenRouter Anahtarı Gerekir)", IsFree = true });
 
         // Anthropic Claude
         allList.Add(new ModelOption { ModelId = "claude-3-5-sonnet-20241022", DisplayName = "Claude 3.5 Sonnet", Provider = "Anthropic Claude", ApiKey = claudeKey, SpeedTag = "🧠 Çok Zeki", IsFree = false });
@@ -157,7 +199,10 @@ public partial class ChatPlaygroundViewModel : ObservableObject
         // Auto Select target:
         if (!string.IsNullOrWhiteSpace(preferredProvider))
         {
-            SelectedModel = AvailableModels.FirstOrDefault(m => m.Provider == preferredProvider) ?? AvailableModels.FirstOrDefault();
+            SelectedModel = AvailableModels.FirstOrDefault(m => m.Provider == preferredProvider && m.HasKey)
+                         ?? AvailableModels.FirstOrDefault(m => m.Provider == preferredProvider)
+                         ?? AvailableModels.FirstOrDefault(m => m.HasKey)
+                         ?? AvailableModels.FirstOrDefault();
         }
         else
         {
@@ -170,6 +215,15 @@ public partial class ChatPlaygroundViewModel : ObservableObject
 
     partial void OnSelectedModelChanged(ModelOption? value)
     {
+        if (value != null && string.IsNullOrWhiteSpace(value.ApiKey))
+        {
+            var keys = _storageService.LoadKeys();
+            string key = FindKeyForProvider(keys, value.Provider);
+            if (!string.IsNullOrWhiteSpace(key))
+            {
+                value.ApiKey = key;
+            }
+        }
         UpdateActiveKeyStatus();
     }
 
@@ -255,40 +309,45 @@ public partial class ChatPlaygroundViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(InputText) || IsGenerating) return;
 
+        // Auto-save key if user pasted into quick key box
+        if (!string.IsNullOrWhiteSpace(QuickKeyInput))
+        {
+            QuickSaveKey();
+        }
+
         if (SelectedModel == null)
         {
             StreamingStatus = "Lütfen önce bir model seçin.";
             return;
         }
 
-        // Dynamically resolve key if empty
+        // 1. Resolve key for SelectedModel if empty
         if (string.IsNullOrWhiteSpace(SelectedModel.ApiKey))
         {
             var keys = _storageService.LoadKeys();
-            var matchingKey = keys.FirstOrDefault(k => k.Provider == SelectedModel.Provider && !string.IsNullOrWhiteSpace(k.Key));
-            if (matchingKey != null)
+            string matchingKey = FindKeyForProvider(keys, SelectedModel.Provider);
+            if (!string.IsNullOrWhiteSpace(matchingKey))
             {
-                SelectedModel.ApiKey = matchingKey.Key;
+                SelectedModel.ApiKey = matchingKey;
             }
-            else
+        }
+
+        // 2. If STILL empty, check if we can switch to ANY model that HAS an active key
+        if (string.IsNullOrWhiteSpace(SelectedModel.ApiKey))
+        {
+            var modelWithKey = AvailableModels.FirstOrDefault(m => m.HasKey && !string.IsNullOrWhiteSpace(m.ApiKey));
+            if (modelWithKey != null)
             {
-                // Find ANY valid key the user has
-                var anyAvailableKey = keys.FirstOrDefault(k => !string.IsNullOrWhiteSpace(k.Key));
-                if (anyAvailableKey != null)
-                {
-                    var switchModel = AvailableModels.FirstOrDefault(m => m.Provider == anyAvailableKey.Provider && m.HasKey);
-                    if (switchModel != null)
-                    {
-                        SelectedModel = switchModel;
-                        StreamingStatus = $"'{SelectedModel.Provider}' için kayıtlı anahtarınız ({anyAvailableKey.MaskedKey}) bulundu ve otomatik seçildi. Yanıt alınıyor...";
-                    }
-                }
-                else
-                {
-                    StreamingStatus = $"⚠️ Uyarı: Henüz hiçbir API anahtarı kaydedilmedi. Lütfen 'Anahtar Yöneticisi' sekmesinden bir anahtar ekleyin veya yukarıdaki hızlı anahtar kutusuna yapıştırın.";
-                    return;
-                }
+                SelectedModel = modelWithKey;
+                StreamingStatus = $"'{SelectedModel.DisplayName}' [{SelectedModel.Provider}] için kayıtlı aktif anahtarınız bulundu ve otomatik seçildi.";
             }
+        }
+
+        // 3. If STILL empty: STOP! DO NOT SEND!
+        if (string.IsNullOrWhiteSpace(SelectedModel.ApiKey))
+        {
+            StreamingStatus = $"⚠️ '{SelectedModel.Provider}' ({SelectedModel.DisplayName}) için API anahtarı girilmedi. Lütfen üstteki kutudan anahtarınızı yapıştırıp '⚡ Aktif Et'e basın veya 'Anahtar Kasası'ndan ekleyin.";
+            return;
         }
 
         string userPrompt = InputText.Trim();

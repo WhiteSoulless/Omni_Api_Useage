@@ -8,7 +8,8 @@ namespace OmniKeyStudio.Services;
 public class KeyDetectorService
 {
     // Regex Patterns for major AI providers
-    private static readonly Regex GeminiPattern = new(@"^AIzaSy[a-zA-Z0-9_\-]{20,}$", RegexOptions.Compiled);
+    private static readonly Regex GeminiLegacyPattern = new(@"^AIzaSy[a-zA-Z0-9_\-]{20,}$", RegexOptions.Compiled);
+    private static readonly Regex GeminiNewPattern = new(@"^AQ\.Ab[a-zA-Z0-9_\-\.]{15,}$", RegexOptions.Compiled);
     private static readonly Regex AnthropicPattern = new(@"^sk-ant-(api\d{2}-)?[a-zA-Z0-9_\-]{20,}$", RegexOptions.Compiled);
     private static readonly Regex GroqPattern = new(@"^gsk_[a-zA-Z0-9_\-]{20,}$", RegexOptions.Compiled);
     private static readonly Regex OpenRouterPattern = new(@"^sk-or-v1-[a-zA-Z0-9_\-]{16,}$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -75,15 +76,15 @@ public class KeyDetectorService
             };
         }
 
-        // 1. Google Gemini (Google AI Studio)
-        if (GeminiPattern.IsMatch(trimmed) || trimmed.StartsWith("AIzaSy"))
+        // 1. Google Gemini (Google AI Studio - 2026 new "AQ.Ab..." format and legacy "AIzaSy...")
+        if (trimmed.StartsWith("AQ.Ab") || trimmed.StartsWith("AQ.") || GeminiNewPattern.IsMatch(trimmed) || GeminiLegacyPattern.IsMatch(trimmed) || trimmed.StartsWith("AIzaSy"))
         {
             return new DetectionResult
             {
                 CandidateProvider = "Google Gemini",
                 Confidence = 0.99,
-                Reason = "Google AI Studio / Gemini 'AIzaSy...' resmi anahtar biçimi tespit edildi.",
-                PatternMatch = "AIzaSy*",
+                Reason = "Google AI Studio / Gemini güncel resmi anahtar biçimi (AQ.Ab... / AIzaSy...) tespit edildi.",
+                PatternMatch = trimmed.StartsWith("AQ.") ? "AQ.Ab*" : "AIzaSy*",
                 RequiresProbing = false,
                 AlternativeProviders = new List<string>()
             };

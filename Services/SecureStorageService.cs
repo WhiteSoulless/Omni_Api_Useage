@@ -14,10 +14,10 @@ public class SecureStorageService
     private readonly string _keysFilePath;
     private readonly string _snippetsFilePath;
 
-    public SecureStorageService()
+    public SecureStorageService(string? customDir = null)
     {
         string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        _storageDir = Path.Combine(appData, "OmniKeyStudio");
+        _storageDir = customDir ?? Path.Combine(appData, "OmniKeyStudio");
         Directory.CreateDirectory(_storageDir);
 
         _keysFilePath = Path.Combine(_storageDir, "keys_vault.dat");
@@ -36,7 +36,64 @@ public class SecureStorageService
             byte[] decryptedBytes = ProtectedData.Unprotect(encryptedBytes, null, DataProtectionScope.CurrentUser);
             string json = Encoding.UTF8.GetString(decryptedBytes);
 
-            return JsonSerializer.Deserialize<List<ApiKeyEntry>>(json) ?? new List<ApiKeyEntry>();
+            var list = JsonSerializer.Deserialize<List<ApiKeyEntry>>(json) ?? new List<ApiKeyEntry>();
+            bool changed = false;
+
+            foreach (var entry in list)
+            {
+                if (string.IsNullOrWhiteSpace(entry.Key)) continue;
+                string clean = KeyDetectorService.CleanKey(entry.Key);
+                if (clean != entry.Key)
+                {
+                    entry.Key = clean;
+                    changed = true;
+                }
+
+                // Auto-normalize provider if misidentified
+                if (clean.StartsWith("AQ.Ab") || clean.StartsWith("AQ.") || clean.StartsWith("AIzaSy"))
+                {
+                    if (entry.Provider != "Google Gemini")
+                    {
+                        entry.Provider = "Google Gemini";
+                        entry.IsValid = true;
+                        changed = true;
+                    }
+                }
+                else if (clean.StartsWith("gsk_"))
+                {
+                    if (entry.Provider != "Groq")
+                    {
+                        entry.Provider = "Groq";
+                        entry.IsValid = true;
+                        changed = true;
+                    }
+                }
+                else if (clean.StartsWith("sk-or-v1-") || clean.StartsWith("sk-or-"))
+                {
+                    if (entry.Provider != "OpenRouter")
+                    {
+                        entry.Provider = "OpenRouter";
+                        entry.IsValid = true;
+                        changed = true;
+                    }
+                }
+                else if (clean.StartsWith("sk-ant-"))
+                {
+                    if (entry.Provider != "Anthropic Claude")
+                    {
+                        entry.Provider = "Anthropic Claude";
+                        entry.IsValid = true;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed)
+            {
+                SaveKeys(list);
+            }
+
+            return list;
         }
         catch (Exception)
         {

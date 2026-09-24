@@ -200,6 +200,14 @@ public partial class KeyManagerViewModel : ObservableObject
             SaveKeyEntry(cleanKey, provider, true, "Aktif edildi", defaultModels);
             InputKey = string.Empty;
         }
+        else if (SelectedKey != null)
+        {
+            provider = SelectedKey.Provider;
+        }
+        else if (SavedKeys.Count > 0)
+        {
+            provider = SavedKeys[0].Provider;
+        }
 
         OnStartChatRequested?.Invoke(provider);
     }

@@ -10,6 +10,7 @@ public class KeyDetectorTests
 
     [Theory]
     [InlineData("AIzaSy" + "_TEST_PREFIX_SAMPLE_NO_REAL_KEY", "Google Gemini")]
+    [InlineData("AQ.Ab" + "8_TEST_PREFIX_SAMPLE_NO_REAL_KEY_2026", "Google Gemini")]
     [InlineData("gsk_" + "test_prefix_sample_no_real_key", "Groq")]
     [InlineData("sk-or-v1-" + "test_prefix_sample_no_real_key", "OpenRouter")]
     [InlineData("sk-ant-" + "test_prefix_sample_no_real_key", "Anthropic Claude")]

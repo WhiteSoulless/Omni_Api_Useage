@@ -119,7 +119,10 @@ public class KeyValidatorService
         try
         {
             string url = $"https://generativelanguage.googleapis.com/v1beta/models?key={Uri.EscapeDataString(key)}";
-            using var response = await HttpClient.GetAsync(url);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("x-goog-api-key", key);
+
+            using var response = await HttpClient.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
@@ -194,6 +197,8 @@ public class KeyValidatorService
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, "https://openrouter.ai/api/v1/models");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
+            request.Headers.Add("HTTP-Referer", "https://github.com/OmniKeyStudio");
+            request.Headers.Add("X-Title", "OmniKey AI Studio");
 
             using var response = await HttpClient.SendAsync(request);
             if (response.IsSuccessStatusCode)

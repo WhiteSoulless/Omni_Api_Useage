@@ -25,7 +25,7 @@
                 <StackPanel>
                     <TextBlock Text="Ücretsiz ve Ultra Hızlı Modeller Kataloğu" 
                                FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                    <TextBlock Text="Groq (500-750 tok/s), Google Gemini 1M bağlam, OpenRouter sıfır maliyetli ve yerel Ollama modelleri." 
+                    <TextBlock Text="Groq (500-750 tok/s), Google Gemini 1M bağlam ve OpenRouter sıfır maliyetli bulut modelleri." 
                                Foreground="{StaticResource TextSecondaryBrush}" FontSize="12.5" Margin="0,3,0,0"/>
                 </StackPanel>
 

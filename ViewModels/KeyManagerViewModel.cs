@@ -59,7 +59,6 @@ public partial class KeyManagerViewModel : ObservableObject
         "Cerebras",
         "Hugging Face",
         "GitHub Models",
-        "Yerel Ollama",
         "Özel / Custom"
     };
 
@@ -128,14 +127,6 @@ public partial class KeyManagerViewModel : ObservableObject
         else if (result.CandidateProvider.Contains("OpenAI"))
         {
             SelectedProvider = "OpenAI";
-        }
-
-        if (SelectedProvider.Contains("Ollama") || SelectedProvider.Contains("Özel"))
-        {
-            if (string.IsNullOrWhiteSpace(CustomBaseUrl))
-            {
-                CustomBaseUrl = "http://localhost:11434/v1";
-            }
         }
     }
 

@@ -22,7 +22,7 @@
   - **Hugging Face:** `hf_...`
   - **GitHub Models:** `ghp_...` / `github_pat_...`
   - **Perplexity:** `pplx-...`
-  - **Özel / Yerel Uç Noktalar:** Ollama (`http://localhost:11434/v1`), LM Studio (`http://localhost:1234/v1`).
+  - **Özel Bulut Gateway:** Özel OpenAI-uyumlu sunucu uç noktaları.
 - **Canlı Doğrulama (Live Probe):** Anahtarın gerçekten aktif olup olmadığını test eder, hesap kotasını kontrol eder ve o anahtara tanımlı tüm aktif modelleri otomatik listeler.
 
 ### 2. ⚡ Ücretsiz ve Ultra Hızlı Model Kataloğu
@@ -30,7 +30,6 @@
   - **Groq:** LPU çipleri üzerinde çalışan dünyanın en hızlı LLM altyapısı (~500 - 750+ token/saniye): `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `mixtral-8x7b-32768`.
   - **Google Gemini Free Tier:** `gemini-2.0-flash` ve devasa 1 milyon token bağlamlı `gemini-1.5-flash`.
   - **OpenRouter Free Tier (`:free`):** Topluluğa tamamen sıfır maliyetle sunulan `meta-llama/llama-3.3-70b-instruct:free`, `deepseek/deepseek-r1:free`, `qwen/qwen-2.5-coder-32b-instruct:free`.
-  - **Yerel LLM (Ollama & LM Studio):** İnternetsiz, %100 gizli ve limitsiz yerel yapay zeka entegrasyonu.
 - **Hız & Gecikme Testi (Benchmark):** Tek tıkla modellerin ilk yanıt süresini (TTFT), toplam süresini ve saniye başına token hızını ölçer.
 
 ### 3. 💬 Evrensel Sohbet ve Test Konsolu (Playground)

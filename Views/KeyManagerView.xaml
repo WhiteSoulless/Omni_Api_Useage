@@ -95,7 +95,7 @@
                     <TextBlock Text="Özel Base URL (Opsiyonel):" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <TextBox Grid.Column="1" Style="{StaticResource ModernTextBox}" 
                              Text="{Binding CustomBaseUrl, UpdateSourceTrigger=PropertyChanged}"
-                             ToolTip="Özel bir OpenAI-uyumlu sunucu veya yerel endpoint için (örn: http://localhost:11434/v1)"/>
+                             ToolTip="Özel bir OpenAI-uyumlu bulut sunucusu veya uzak API proxy için (örn: https://api.my-gateway.com/v1)"/>
                 </Grid>
 
                 <!-- Action Buttons & Status -->

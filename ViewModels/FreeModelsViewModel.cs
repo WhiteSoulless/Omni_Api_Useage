@@ -131,18 +131,6 @@ public partial class FreeModelsViewModel : ObservableObject
             Description = "Kod yazma, refactor ve hata ayıklama konusunda optimize edilmiş ücretsiz yazılım mühendisi modeli."
         });
 
-        // 4. Local Ollama
-        FreeModelsList.Add(new ModelInfo
-        {
-            Id = "llama3.2",
-            DisplayName = "Local Ollama Llama 3.2",
-            Provider = "Local Ollama",
-            SpeedRating = "💻 Yerel Donanım Hızı",
-            IsFree = true,
-            ContextWindow = "128k token",
-            Description = "Kendi bilgisayarınızda çalışan, internet gerektirmeyen, tamamen gizli ve limitsiz yerel yapay zeka."
-        });
-
         SelectedModel = FreeModelsList[0];
     }
 
@@ -155,7 +143,7 @@ public partial class FreeModelsViewModel : ObservableObject
         var keyEntry = keys.FirstOrDefault(k => k.Provider == SelectedModel.Provider);
         string apiKey = keyEntry?.Key ?? "";
 
-        if (string.IsNullOrEmpty(apiKey) && SelectedModel.Provider != "Local Ollama")
+        if (string.IsNullOrEmpty(apiKey))
         {
             BenchmarkStatus = $"Hata: {SelectedModel.Provider} için kayıtlı API anahtarı yok. Lütfen Anahtar Yöneticisi'nden ekleyin.";
             return;

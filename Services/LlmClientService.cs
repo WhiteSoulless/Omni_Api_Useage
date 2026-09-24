@@ -70,8 +70,6 @@ public class LlmClientService
             "Cerebras" => "https://api.cerebras.ai/v1",
             "Perplexity AI" => "https://api.perplexity.ai",
             "Mistral AI" => "https://api.mistral.ai/v1",
-            "Local Ollama" => "http://localhost:11434/v1",
-            "LM Studio" => "http://localhost:1234/v1",
             _ => "https://api.openai.com/v1"
         };
     }

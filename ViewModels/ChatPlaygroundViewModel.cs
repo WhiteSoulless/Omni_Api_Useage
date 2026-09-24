@@ -131,17 +131,6 @@ public partial class ChatPlaygroundViewModel : ObservableObject
             }
         }
 
-        // 5. Add Local Ollama (100% Free & Offline)
-        AvailableModels.Add(new ModelOption
-        {
-            ModelId = "llama3.2",
-            DisplayName = "Llama 3.2 (Yerel Ollama)",
-            Provider = "Local Ollama",
-            CustomBaseUrl = "http://localhost:11434/v1",
-            SpeedTag = "💻 Yerel Çevrimdışı",
-            IsFree = true
-        });
-
         if (SelectedModel == null && AvailableModels.Count > 0)
         {
             SelectedModel = AvailableModels.FirstOrDefault(m => !string.IsNullOrEmpty(m.ApiKey)) ?? AvailableModels[0];
@@ -243,7 +232,7 @@ public partial class ChatPlaygroundViewModel : ObservableObject
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(SelectedModel.ApiKey) && SelectedModel.Provider != "Local Ollama")
+        if (string.IsNullOrWhiteSpace(SelectedModel.ApiKey))
         {
             StreamingStatus = $"Uyarı: {SelectedModel.Provider} için kaydedilmiş bir API anahtarı bulunamadı. Lütfen 'Anahtar Yöneticisi' sekmesinden bir anahtar ekleyin.";
             return;

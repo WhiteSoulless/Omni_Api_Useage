@@ -18,14 +18,14 @@ public class ServiceTests
             new ApiKeyEntry
             {
                 Provider = "Groq",
-                Key = "gsk_mock_test_key_sample_12345",
+                Key = "gsk_" + "sample_test_placeholder_key",
                 IsValid = true,
                 StatusMessage = "Doğrulandı"
             },
             new ApiKeyEntry
             {
                 Provider = "Google Gemini",
-                Key = "AIzaSyMockTestKeySample1234567890",
+                Key = "AIzaSy" + "sample_test_placeholder_key",
                 IsValid = true,
                 StatusMessage = "Aktif"
             }
@@ -44,16 +44,16 @@ public class ServiceTests
     {
         var generator = new CodeGeneratorService();
 
-        string csharp = generator.GenerateCSharpCode("Groq", "llama-3.3-70b-versatile", "gsk_mock_dummy", "");
+        string csharp = generator.GenerateCSharpCode("Groq", "llama-3.3-70b-versatile", "TEST_KEY_PLACEHOLDER", "");
         Assert.Contains("HttpClient", csharp);
         Assert.Contains("llama-3.3-70b-versatile", csharp);
         Assert.Contains("api.groq.com", csharp);
 
-        string python = generator.GeneratePythonCode("Google Gemini", "gemini-2.0-flash", "AIzaSyMockDummy", "");
+        string python = generator.GeneratePythonCode("Google Gemini", "gemini-2.0-flash", "TEST_KEY_PLACEHOLDER", "");
         Assert.Contains("from google import genai", python);
         Assert.Contains("gemini-2.0-flash", python);
 
-        string curl = generator.GenerateCurlCode("OpenRouter", "meta-llama/llama-3.3-70b-instruct:free", "sk-or-v1-mock-dummy", "");
+        string curl = generator.GenerateCurlCode("OpenRouter", "meta-llama/llama-3.3-70b-instruct:free", "TEST_KEY_PLACEHOLDER", "");
         Assert.Contains("openrouter.ai", curl);
         Assert.Contains("curl", curl);
     }

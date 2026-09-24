@@ -65,6 +65,7 @@ public partial class KeyManagerViewModel : ObservableObject
     public ObservableCollection<ApiKeyEntry> SavedKeys { get; } = new();
 
     public event Action? OnKeysChanged;
+    public event Action<string>? OnStartChatRequested;
 
     public KeyManagerViewModel(
         KeyDetectorService detectorService,
@@ -185,6 +186,32 @@ public partial class KeyManagerViewModel : ObservableObject
 
         InputKey = string.Empty;
         CustomBaseUrl = string.Empty;
+    }
+
+    [RelayCommand]
+    private void StartChatWithCurrentKey()
+    {
+        string cleanKey = KeyDetectorService.CleanKey(InputKey);
+        string provider = !string.IsNullOrWhiteSpace(SelectedProvider) ? SelectedProvider : "Google Gemini";
+
+        if (!string.IsNullOrWhiteSpace(cleanKey))
+        {
+            var defaultModels = KeyValidatorService.GetDefaultModelsForProvider(provider);
+            SaveKeyEntry(cleanKey, provider, true, "Aktif edildi", defaultModels);
+            InputKey = string.Empty;
+        }
+
+        OnStartChatRequested?.Invoke(provider);
+    }
+
+    [RelayCommand]
+    private void StartChatWithSavedKey(ApiKeyEntry? entry)
+    {
+        var target = entry ?? SelectedKey;
+        if (target != null)
+        {
+            OnStartChatRequested?.Invoke(target.Provider);
+        }
     }
 
     private void SaveKeyEntry(string key, string provider, bool isValid, string message, System.Collections.Generic.List<string> models)

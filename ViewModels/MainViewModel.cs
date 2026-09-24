@@ -36,6 +36,21 @@ public partial class MainViewModel : ObservableObject
             GlobalStatus = "API anahtarları güncellendi ve modeller yenilendi.";
         };
 
+        // When user clicks Start Chat from Key Manager
+        KeyManager.OnStartChatRequested += (provider) =>
+        {
+            SelectedTabIndex = 1; // Switch to Chat tab
+            ChatPlayground.RefreshModels(provider);
+            GlobalStatus = $"✅ {provider} anahtarınız aktif edildi. Hemen mesajınızı yazabilirsiniz!";
+        };
+
+        // When Chat requests to navigate to Key Manager
+        ChatPlayground.OnNavigateToKeyManager += () =>
+        {
+            SelectedTabIndex = 0;
+            GlobalStatus = "Lütfen API anahtarınızı ekleyin veya güncelleyin.";
+        };
+
         // When free model is selected for chat
         FreeModels.OnSelectModelForChat += (provider, modelId) =>
         {

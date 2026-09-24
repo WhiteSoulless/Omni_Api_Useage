@@ -23,7 +23,11 @@ public class ModelOption
     public bool IsFree { get; set; }
     public string SpeedTag { get; set; } = string.Empty;
 
-    public string FullTitle => $"{DisplayName} [{Provider}] - {SpeedTag} {(IsFree ? "★ Ücretsiz" : "")}";
+    public bool HasKey => !string.IsNullOrWhiteSpace(ApiKey);
+
+    public string FullTitle => HasKey 
+        ? $"🟢 {DisplayName} [{Provider}] - {SpeedTag} (Aktif)" 
+        : $"⚪ {DisplayName} [{Provider}] - {SpeedTag} (Anahtar Yok)";
 }
 
 public partial class ChatPlaygroundViewModel : ObservableObject
@@ -47,8 +51,16 @@ public partial class ChatPlaygroundViewModel : ObservableObject
     [ObservableProperty]
     private ModelOption? _selectedModel;
 
+    [ObservableProperty]
+    private string _quickKeyInput = string.Empty;
+
+    [ObservableProperty]
+    private string _activeKeyStatusText = "Kayıtlı anahtar aranıyor...";
+
     public ObservableCollection<ChatMessage> Messages { get; } = new();
     public ObservableCollection<ModelOption> AvailableModels { get; } = new();
+
+    public event Action? OnNavigateToKeyManager;
 
     public ChatPlaygroundViewModel(LlmClientService llmService, SecureStorageService storageService)
     {
@@ -58,66 +70,70 @@ public partial class ChatPlaygroundViewModel : ObservableObject
         RefreshModels();
     }
 
-    public void RefreshModels()
+    public void RefreshModels(string? preferredProvider = null)
     {
         AvailableModels.Clear();
         var keys = _storageService.LoadKeys();
 
-        // 1. Add Groq Free & Ultra-Fast Models if key exists, or as template
+        // 1. Gather keys map
         var groqKey = keys.FirstOrDefault(k => k.Provider == "Groq")?.Key ?? "";
-        AddGroqModels(groqKey);
-
-        // 2. Add Gemini Models
         var geminiKey = keys.FirstOrDefault(k => k.Provider == "Google Gemini")?.Key ?? "";
-        AddGeminiModels(geminiKey);
-
-        // 3. Add OpenRouter Models
         var openRouterKey = keys.FirstOrDefault(k => k.Provider == "OpenRouter")?.Key ?? "";
-        AddOpenRouterModels(openRouterKey);
+        var openAiKey = keys.FirstOrDefault(k => k.Provider == "OpenAI")?.Key ?? "";
+        var deepSeekKey = keys.FirstOrDefault(k => k.Provider == "DeepSeek")?.Key ?? "";
+        var claudeKey = keys.FirstOrDefault(k => k.Provider == "Anthropic Claude")?.Key ?? "";
+        var xAiKey = keys.FirstOrDefault(k => k.Provider == "xAI (Grok)")?.Key ?? "";
+        var mistralKey = keys.FirstOrDefault(k => k.Provider == "Mistral AI")?.Key ?? "";
+        var perplexityKey = keys.FirstOrDefault(k => k.Provider == "Perplexity AI")?.Key ?? "";
 
-        // 4. Add OpenAI / DeepSeek / Mistral / Anthropic
-        foreach (var keyEntry in keys.Where(k => k.IsValid))
+        var allList = new List<ModelOption>();
+
+        // Google Gemini
+        allList.Add(new ModelOption { ModelId = "gemini-2.0-flash", DisplayName = "Gemini 2.0 Flash", Provider = "Google Gemini", ApiKey = geminiKey, SpeedTag = "🚀 Yeni Nesil Hızlı", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "gemini-1.5-flash", DisplayName = "Gemini 1.5 Flash", Provider = "Google Gemini", ApiKey = geminiKey, SpeedTag = "⚡ 1M Bağlam Hızlı", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "gemini-1.5-pro", DisplayName = "Gemini 1.5 Pro", Provider = "Google Gemini", ApiKey = geminiKey, SpeedTag = "🧠 Derin Düşünme", IsFree = true });
+
+        // Groq
+        allList.Add(new ModelOption { ModelId = "llama-3.3-70b-versatile", DisplayName = "Llama 3.3 70B Versatile", Provider = "Groq", ApiKey = groqKey, SpeedTag = "⚡ 500+ tok/s Ultra Hızlı", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "llama-3.1-8b-instant", DisplayName = "Llama 3.1 8B Instant", Provider = "Groq", ApiKey = groqKey, SpeedTag = "⚡ 750+ tok/s Işık Hızında", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "mixtral-8x7b-32768", DisplayName = "Mixtral 8x7B (32k)", Provider = "Groq", ApiKey = groqKey, SpeedTag = "⚡ 450+ tok/s", IsFree = true });
+
+        // DeepSeek
+        allList.Add(new ModelOption { ModelId = "deepseek-chat", DisplayName = "DeepSeek V3 (Chat)", Provider = "DeepSeek", ApiKey = deepSeekKey, SpeedTag = "⚡ Hızlı & Zeki", IsFree = false });
+        allList.Add(new ModelOption { ModelId = "deepseek-reasoner", DisplayName = "DeepSeek R1 (Reasoner)", Provider = "DeepSeek", ApiKey = deepSeekKey, SpeedTag = "🧠 Akıl Yürütme", IsFree = false });
+
+        // OpenAI
+        allList.Add(new ModelOption { ModelId = "gpt-4o", DisplayName = "GPT-4o (Amiral)", Provider = "OpenAI", ApiKey = openAiKey, SpeedTag = "🚀 Hızlı", IsFree = false });
+        allList.Add(new ModelOption { ModelId = "gpt-4o-mini", DisplayName = "GPT-4o Mini", Provider = "OpenAI", ApiKey = openAiKey, SpeedTag = "⚡ Çok Hızlı", IsFree = false });
+
+        // OpenRouter Free
+        allList.Add(new ModelOption { ModelId = "meta-llama/llama-3.3-70b-instruct:free", DisplayName = "Llama 3.3 70B (Free)", Provider = "OpenRouter", ApiKey = openRouterKey, SpeedTag = "★ Tamamen Ücretsiz", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "deepseek/deepseek-r1:free", DisplayName = "DeepSeek R1 (Free)", Provider = "OpenRouter", ApiKey = openRouterKey, SpeedTag = "★ Tamamen Ücretsiz", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "google/gemini-2.0-flash-exp:free", DisplayName = "Gemini 2.0 Flash (Free)", Provider = "OpenRouter", ApiKey = openRouterKey, SpeedTag = "★ Tamamen Ücretsiz", IsFree = true });
+
+        // Anthropic Claude
+        allList.Add(new ModelOption { ModelId = "claude-3-5-sonnet-20241022", DisplayName = "Claude 3.5 Sonnet", Provider = "Anthropic Claude", ApiKey = claudeKey, SpeedTag = "🧠 Çok Zeki", IsFree = false });
+        allList.Add(new ModelOption { ModelId = "claude-3-5-haiku-20241022", DisplayName = "Claude 3.5 Haiku", Provider = "Anthropic Claude", ApiKey = claudeKey, SpeedTag = "⚡ Ultra Hızlı", IsFree = false });
+
+        // xAI Grok
+        allList.Add(new ModelOption { ModelId = "grok-beta", DisplayName = "Grok Beta", Provider = "xAI (Grok)", ApiKey = xAiKey, SpeedTag = "🚀 Hızlı", IsFree = false });
+        allList.Add(new ModelOption { ModelId = "grok-2-latest", DisplayName = "Grok 2", Provider = "xAI (Grok)", ApiKey = xAiKey, SpeedTag = "🧠 Akıl Yürütme", IsFree = false });
+
+        // Mistral
+        allList.Add(new ModelOption { ModelId = "mistral-large-latest", DisplayName = "Mistral Large", Provider = "Mistral AI", ApiKey = mistralKey, SpeedTag = "🚀 Güçlü", IsFree = false });
+        allList.Add(new ModelOption { ModelId = "codestral-latest", DisplayName = "Codestral (Kod Uzmanı)", Provider = "Mistral AI", ApiKey = mistralKey, SpeedTag = "⚡ Hızlı Kodlama", IsFree = false });
+
+        // Perplexity
+        allList.Add(new ModelOption { ModelId = "sonar", DisplayName = "Sonar (Web Arama)", Provider = "Perplexity AI", ApiKey = perplexityKey, SpeedTag = "🌐 Arama Destekli", IsFree = false });
+
+        // Any custom discovered models
+        foreach (var keyEntry in keys)
         {
-            if (keyEntry.Provider == "OpenAI")
-            {
-                AvailableModels.Add(new ModelOption { ModelId = "gpt-4o", DisplayName = "GPT-4o (Amiral)", Provider = "OpenAI", ApiKey = keyEntry.Key, SpeedTag = "🚀 Hızlı", IsFree = false });
-                AvailableModels.Add(new ModelOption { ModelId = "gpt-4o-mini", DisplayName = "GPT-4o Mini", Provider = "OpenAI", ApiKey = keyEntry.Key, SpeedTag = "⚡ Çok Hızlı", IsFree = false });
-            }
-            else if (keyEntry.Provider == "DeepSeek")
-            {
-                AvailableModels.Add(new ModelOption { ModelId = "deepseek-chat", DisplayName = "DeepSeek V3 (Chat)", Provider = "DeepSeek", ApiKey = keyEntry.Key, SpeedTag = "⚡ Hızlı", IsFree = false });
-                AvailableModels.Add(new ModelOption { ModelId = "deepseek-reasoner", DisplayName = "DeepSeek R1 (Reasoner)", Provider = "DeepSeek", ApiKey = keyEntry.Key, SpeedTag = "🧠 Akıl Yürütme", IsFree = false });
-            }
-            else if (keyEntry.Provider == "Anthropic Claude")
-            {
-                AvailableModels.Add(new ModelOption { ModelId = "claude-3-5-sonnet-20241022", DisplayName = "Claude 3.5 Sonnet", Provider = "Anthropic Claude", ApiKey = keyEntry.Key, SpeedTag = "🧠 Çok Zeki", IsFree = false });
-                AvailableModels.Add(new ModelOption { ModelId = "claude-3-5-haiku-20241022", DisplayName = "Claude 3.5 Haiku", Provider = "Anthropic Claude", ApiKey = keyEntry.Key, SpeedTag = "⚡ Ultra Hızlı", IsFree = false });
-            }
-            else if (keyEntry.Provider == "xAI (Grok)")
-            {
-                AvailableModels.Add(new ModelOption { ModelId = "grok-beta", DisplayName = "Grok Beta", Provider = "xAI (Grok)", ApiKey = keyEntry.Key, SpeedTag = "🚀 Hızlı", IsFree = false });
-                AvailableModels.Add(new ModelOption { ModelId = "grok-2-latest", DisplayName = "Grok 2", Provider = "xAI (Grok)", ApiKey = keyEntry.Key, SpeedTag = "🧠 Akıl Yürütme", IsFree = false });
-            }
-            else if (keyEntry.Provider == "Mistral AI")
-            {
-                AvailableModels.Add(new ModelOption { ModelId = "mistral-large-latest", DisplayName = "Mistral Large", Provider = "Mistral AI", ApiKey = keyEntry.Key, SpeedTag = "🚀 Güçlü", IsFree = false });
-                AvailableModels.Add(new ModelOption { ModelId = "codestral-latest", DisplayName = "Codestral (Kod Uzmanı)", Provider = "Mistral AI", ApiKey = keyEntry.Key, SpeedTag = "⚡ Hızlı Kodlama", IsFree = false });
-            }
-            else if (keyEntry.Provider == "Perplexity AI")
-            {
-                AvailableModels.Add(new ModelOption { ModelId = "sonar", DisplayName = "Sonar (Web Arama)", Provider = "Perplexity AI", ApiKey = keyEntry.Key, SpeedTag = "🌐 Arama Destekli", IsFree = false });
-            }
-            else if (!string.IsNullOrWhiteSpace(keyEntry.CustomBaseUrl))
-            {
-                AvailableModels.Add(new ModelOption { ModelId = "default", DisplayName = $"{keyEntry.Provider} Model", Provider = keyEntry.Provider, ApiKey = keyEntry.Key, CustomBaseUrl = keyEntry.CustomBaseUrl, SpeedTag = "Özel", IsFree = false });
-            }
-
-            // Also add any discovered models from this key if not already present
             foreach (var discovered in keyEntry.DiscoveredModels.Take(10))
             {
-                if (!AvailableModels.Any(m => m.ModelId == discovered && m.Provider == keyEntry.Provider))
+                if (!allList.Any(m => m.ModelId == discovered && m.Provider == keyEntry.Provider))
                 {
-                    AvailableModels.Add(new ModelOption
+                    allList.Add(new ModelOption
                     {
                         ModelId = discovered,
                         DisplayName = discovered,
@@ -131,94 +147,107 @@ public partial class ChatPlaygroundViewModel : ObservableObject
             }
         }
 
-        if (SelectedModel == null && AvailableModels.Count > 0)
+        // SORT: Models WITH keys come FIRST!
+        var sorted = allList.OrderByDescending(m => m.HasKey).ThenBy(m => m.Provider).ToList();
+        foreach (var m in sorted)
         {
-            SelectedModel = AvailableModels.FirstOrDefault(m => !string.IsNullOrEmpty(m.ApiKey)) ?? AvailableModels[0];
+            AvailableModels.Add(m);
+        }
+
+        // Auto Select target:
+        if (!string.IsNullOrWhiteSpace(preferredProvider))
+        {
+            SelectedModel = AvailableModels.FirstOrDefault(m => m.Provider == preferredProvider) ?? AvailableModels.FirstOrDefault();
+        }
+        else
+        {
+            // Pick first model that HAS a key
+            SelectedModel = AvailableModels.FirstOrDefault(m => m.HasKey) ?? AvailableModels.FirstOrDefault();
+        }
+
+        UpdateActiveKeyStatus();
+    }
+
+    partial void OnSelectedModelChanged(ModelOption? value)
+    {
+        UpdateActiveKeyStatus();
+    }
+
+    private void UpdateActiveKeyStatus()
+    {
+        if (SelectedModel == null)
+        {
+            ActiveKeyStatusText = "Model seçilmedi.";
+            return;
+        }
+
+        if (SelectedModel.HasKey)
+        {
+            string masked = SelectedModel.ApiKey.Length > 8 
+                ? $"{SelectedModel.ApiKey[..4]}...{SelectedModel.ApiKey[^4..]}" 
+                : "****";
+            ActiveKeyStatusText = $"✅ {SelectedModel.Provider} API Anahtarı Aktif ({masked})";
+        }
+        else
+        {
+            var keys = _storageService.LoadKeys();
+            var anyKey = keys.FirstOrDefault(k => !string.IsNullOrWhiteSpace(k.Key));
+            if (anyKey != null)
+            {
+                ActiveKeyStatusText = $"⚠️ Bu model ({SelectedModel.Provider}) için anahtar yok. (Kayıtlı: {anyKey.Provider})";
+            }
+            else
+            {
+                ActiveKeyStatusText = "⚠️ Henüz hiçbir API anahtarı eklenmedi.";
+            }
         }
     }
 
-    private void AddGroqModels(string apiKey)
+    [RelayCommand]
+    private void QuickSaveKey()
     {
-        AvailableModels.Add(new ModelOption
+        string clean = KeyDetectorService.CleanKey(QuickKeyInput);
+        if (string.IsNullOrWhiteSpace(clean))
         {
-            ModelId = "llama-3.3-70b-versatile",
-            DisplayName = "Llama 3.3 70B Versatile",
-            Provider = "Groq",
-            ApiKey = apiKey,
-            SpeedTag = "⚡ 500+ tok/s Ultra Hızlı",
-            IsFree = true
-        });
-        AvailableModels.Add(new ModelOption
+            StreamingStatus = "Lütfen bir API anahtarı yapıştırın.";
+            return;
+        }
+
+        var detector = new KeyDetectorService();
+        var det = detector.DetectProvider(clean);
+        string provider = det.CandidateProvider != "Boş Anahtar" && det.CandidateProvider != "Özel / Custom"
+            ? det.CandidateProvider
+            : (SelectedModel?.Provider ?? "Google Gemini");
+
+        var keys = _storageService.LoadKeys();
+        var existing = keys.FirstOrDefault(k => k.Key == clean);
+        if (existing != null)
         {
-            ModelId = "llama-3.1-8b-instant",
-            DisplayName = "Llama 3.1 8B Instant",
-            Provider = "Groq",
-            ApiKey = apiKey,
-            SpeedTag = "⚡ 750+ tok/s Işık Hızında",
-            IsFree = true
-        });
-        AvailableModels.Add(new ModelOption
+            existing.Provider = provider;
+            existing.IsValid = true;
+        }
+        else
         {
-            ModelId = "mixtral-8x7b-32768",
-            DisplayName = "Mixtral 8x7B (32k)",
-            Provider = "Groq",
-            ApiKey = apiKey,
-            SpeedTag = "⚡ 450+ tok/s",
-            IsFree = true
-        });
+            keys.Insert(0, new ApiKeyEntry
+            {
+                Key = clean,
+                Provider = provider,
+                IsValid = true,
+                StatusMessage = "Hızlı eklendi",
+                DiscoveredModels = KeyValidatorService.GetDefaultModelsForProvider(provider)
+            });
+        }
+
+        _storageService.SaveKeys(keys);
+        QuickKeyInput = string.Empty;
+        RefreshModels(provider);
+        StreamingStatus = $"✅ {provider} anahtarı kaydedildi ve model aktif edildi! Mesajınızı yazabilirsiniz.";
     }
 
-    private void AddGeminiModels(string apiKey)
+    [RelayCommand]
+    private void GoToKeyManager()
     {
-        AvailableModels.Add(new ModelOption
-        {
-            ModelId = "gemini-2.0-flash",
-            DisplayName = "Gemini 2.0 Flash",
-            Provider = "Google Gemini",
-            ApiKey = apiKey,
-            SpeedTag = "🚀 Son Nesil Hızlı",
-            IsFree = true
-        });
-        AvailableModels.Add(new ModelOption
-        {
-            ModelId = "gemini-1.5-flash",
-            DisplayName = "Gemini 1.5 Flash",
-            Provider = "Google Gemini",
-            ApiKey = apiKey,
-            SpeedTag = "⚡ 1M Bağlam Hızlı",
-            IsFree = true
-        });
-    }
-
-    private void AddOpenRouterModels(string apiKey)
-    {
-        AvailableModels.Add(new ModelOption
-        {
-            ModelId = "meta-llama/llama-3.3-70b-instruct:free",
-            DisplayName = "Llama 3.3 70B (Free)",
-            Provider = "OpenRouter",
-            ApiKey = apiKey,
-            SpeedTag = "★ Tamamen Ücretsiz",
-            IsFree = true
-        });
-        AvailableModels.Add(new ModelOption
-        {
-            ModelId = "google/gemini-2.0-flash-exp:free",
-            DisplayName = "Gemini 2.0 Flash (Free)",
-            Provider = "OpenRouter",
-            ApiKey = apiKey,
-            SpeedTag = "★ Tamamen Ücretsiz",
-            IsFree = true
-        });
-        AvailableModels.Add(new ModelOption
-        {
-            ModelId = "deepseek/deepseek-r1:free",
-            DisplayName = "DeepSeek R1 (Free)",
-            Provider = "OpenRouter",
-            ApiKey = apiKey,
-            SpeedTag = "★ Tamamen Ücretsiz",
-            IsFree = true
-        });
+        OnNavigateToKeyManager?.Invoke();
     }
 
     [RelayCommand]
@@ -232,10 +261,34 @@ public partial class ChatPlaygroundViewModel : ObservableObject
             return;
         }
 
+        // Dynamically resolve key if empty
         if (string.IsNullOrWhiteSpace(SelectedModel.ApiKey))
         {
-            StreamingStatus = $"Uyarı: {SelectedModel.Provider} için kaydedilmiş bir API anahtarı bulunamadı. Lütfen 'Anahtar Yöneticisi' sekmesinden bir anahtar ekleyin.";
-            return;
+            var keys = _storageService.LoadKeys();
+            var matchingKey = keys.FirstOrDefault(k => k.Provider == SelectedModel.Provider && !string.IsNullOrWhiteSpace(k.Key));
+            if (matchingKey != null)
+            {
+                SelectedModel.ApiKey = matchingKey.Key;
+            }
+            else
+            {
+                // Find ANY valid key the user has
+                var anyAvailableKey = keys.FirstOrDefault(k => !string.IsNullOrWhiteSpace(k.Key));
+                if (anyAvailableKey != null)
+                {
+                    var switchModel = AvailableModels.FirstOrDefault(m => m.Provider == anyAvailableKey.Provider && m.HasKey);
+                    if (switchModel != null)
+                    {
+                        SelectedModel = switchModel;
+                        StreamingStatus = $"'{SelectedModel.Provider}' için kayıtlı anahtarınız ({anyAvailableKey.MaskedKey}) bulundu ve otomatik seçildi. Yanıt alınıyor...";
+                    }
+                }
+                else
+                {
+                    StreamingStatus = $"⚠️ Uyarı: Henüz hiçbir API anahtarı kaydedilmedi. Lütfen 'Anahtar Yöneticisi' sekmesinden bir anahtar ekleyin veya yukarıdaki hızlı anahtar kutusuna yapıştırın.";
+                    return;
+                }
+            }
         }
 
         string userPrompt = InputText.Trim();
@@ -281,9 +334,6 @@ public partial class ChatPlaygroundViewModel : ObservableObject
             {
                 assistantMsg.Content += chunk;
                 tokenCount += Math.Max(1, chunk.Length / 4);
-
-                // Force WPF update on content change
-                OnPropertyChanged(nameof(Messages));
             }
 
             sw.Stop();
@@ -301,7 +351,7 @@ public partial class ChatPlaygroundViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            assistantMsg.Content += $"\n[Hata]: {ex.Message}";
+            assistantMsg.Content += $"\n[Bağlantı Hatası]: {ex.Message}";
             StreamingStatus = $"Hata: {ex.Message}";
         }
         finally

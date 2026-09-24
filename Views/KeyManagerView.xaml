@@ -105,26 +105,35 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Column="0" Text="{Binding ProbeStatus}" Foreground="{StaticResource InfoBrush}" 
                                VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0"/>
 
                     <Button Grid.Column="1" Content="Temizle" Style="{StaticResource ModernSecondaryButton}" 
-                            Command="{Binding ClearInputCommand}" Margin="0,0,8,0" Padding="12,8"/>
+                            Command="{Binding ClearInputCommand}" Margin="0,0,8,0" Padding="10,8"/>
 
                     <!-- Direct Save (Never fails) -->
-                    <Button Grid.Column="2" Content="💾 Doğrulamadan Kaydet" 
+                    <Button Grid.Column="2" Content="💾 Kaydet" 
                             Style="{StaticResource ModernSecondaryButton}"
                             Command="{Binding SaveDirectlyCommand}"
                             ToolTip="Ağ engeli veya kota sorgusu beklemeden anahtarı doğrudan kasaya ekler."
-                            Margin="0,0,8,0" Padding="14,8"/>
+                            Margin="0,0,8,0" Padding="12,8"/>
 
                     <!-- Validate & Probe Online -->
-                    <Button Grid.Column="3" Content="⚡ Canlı Doğrula &amp; Kaydet" 
-                            Style="{StaticResource ModernPrimaryButton}"
+                    <Button Grid.Column="3" Content="⚡ Doğrula &amp; Kaydet" 
+                            Style="{StaticResource ModernSecondaryButton}"
                             Command="{Binding ValidateAndSaveCommand}"
                             IsEnabled="{Binding IsProbing, Converter={x:Null}}"
+                            Margin="0,0,8,0" Padding="12,8"/>
+
+                    <!-- Start Chat Immediately -->
+                    <Button Grid.Column="4" Content="🚀 Bu Anahtarla Hemen Sohbete Başla" 
+                            Style="{StaticResource ModernPrimaryButton}"
+                            Background="#10B981"
+                            Command="{Binding StartChatWithCurrentKeyCommand}"
+                            ToolTip="Anahtarı anında kaydeder ve sohbet ekranını bu sağlayıcıyla açar."
                             Padding="16,8"/>
                 </Grid>
             </StackPanel>
@@ -195,7 +204,13 @@
 
                                     <!-- Right: Actions -->
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button Content="Yeniden Test Et" Style="{StaticResource ModernSecondaryButton}" 
+                                        <Button Content="🚀 Sohbete Başla" Style="{StaticResource ModernPrimaryButton}" 
+                                                Background="#10B981"
+                                                Padding="10,5" FontSize="12" Margin="0,0,8,0"
+                                                Command="{Binding DataContext.StartChatWithSavedKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"/>
+
+                                        <Button Content="Test Et" Style="{StaticResource ModernSecondaryButton}" 
                                                 Padding="10,5" FontSize="12" Margin="0,0,8,0"
                                                 Command="{Binding DataContext.TestSelectedKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"/>

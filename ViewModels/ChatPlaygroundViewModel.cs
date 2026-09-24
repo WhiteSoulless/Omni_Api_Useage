@@ -67,7 +67,16 @@ public partial class ChatPlaygroundViewModel : ObservableObject
         _llmService = llmService;
         _storageService = storageService;
 
+        ClearChatSession();
         RefreshModels();
+    }
+
+    public void ClearChatSession()
+    {
+        Messages.Clear();
+        InputText = string.Empty;
+        QuickKeyInput = string.Empty;
+        StreamingStatus = "Hazır • Oturum verileri geçicidir, kapatıldığında sıfırlanır";
     }
 
     public static string FindKeyForProvider(IEnumerable<ApiKeyEntry> keys, string provider)
@@ -130,10 +139,12 @@ public partial class ChatPlaygroundViewModel : ObservableObject
 
         var allList = new List<ModelOption>();
 
-        // Google Gemini
-        allList.Add(new ModelOption { ModelId = "gemini-2.0-flash", DisplayName = "Gemini 2.0 Flash", Provider = "Google Gemini", ApiKey = geminiKey, SpeedTag = "🚀 Yeni Nesil Hızlı", IsFree = true });
-        allList.Add(new ModelOption { ModelId = "gemini-1.5-flash", DisplayName = "Gemini 1.5 Flash", Provider = "Google Gemini", ApiKey = geminiKey, SpeedTag = "⚡ 1M Bağlam Hızlı", IsFree = true });
-        allList.Add(new ModelOption { ModelId = "gemini-1.5-pro", DisplayName = "Gemini 1.5 Pro", Provider = "Google Gemini", ApiKey = geminiKey, SpeedTag = "🧠 Derin Düşünme", IsFree = true });
+        // Google Gemini (Updated 2026 Models)
+        allList.Add(new ModelOption { ModelId = "gemini-3.6-flash", DisplayName = "Gemini 3.6 Flash (Önerilen)", Provider = "Google Gemini", ApiKey = geminiKey, SpeedTag = "🚀 En Yeni Nesil & Hızlı", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "gemini-flash-latest", DisplayName = "Gemini Flash (En Güncel)", Provider = "Google Gemini", ApiKey = geminiKey, SpeedTag = "🔄 Daima En Son Sürüm", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "gemini-2.5-flash", DisplayName = "Gemini 2.5 Flash", Provider = "Google Gemini", ApiKey = geminiKey, SpeedTag = "⚡ Yüksek Hız", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "gemini-2.5-pro", DisplayName = "Gemini 2.5 Pro", Provider = "Google Gemini", ApiKey = geminiKey, SpeedTag = "🧠 Derin Düşünme", IsFree = true });
+        allList.Add(new ModelOption { ModelId = "gemini-2.5-flash-lite", DisplayName = "Gemini 2.5 Flash-Lite", Provider = "Google Gemini", ApiKey = geminiKey, SpeedTag = "⚡ Düşük Gecikme", IsFree = true });
 
         // Groq
         allList.Add(new ModelOption { ModelId = "llama-3.3-70b-versatile", DisplayName = "Llama 3.3 70B Versatile", Provider = "Groq", ApiKey = groqKey, SpeedTag = "⚡ 500+ tok/s Ultra Hızlı", IsFree = true });

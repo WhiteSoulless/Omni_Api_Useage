@@ -60,9 +60,9 @@ public class ServiceTests
         Assert.Contains("llama-3.3-70b-versatile", csharp);
         Assert.Contains("api.groq.com", csharp);
 
-        string python = generator.GeneratePythonCode("Google Gemini", "gemini-2.0-flash", "TEST_KEY_PLACEHOLDER", "");
+        string python = generator.GeneratePythonCode("Google Gemini", "gemini-3.6-flash", "TEST_KEY_PLACEHOLDER", "");
         Assert.Contains("from google import genai", python);
-        Assert.Contains("gemini-2.0-flash", python);
+        Assert.Contains("gemini-3.6-flash", python);
 
         string curl = generator.GenerateCurlCode("OpenRouter", "meta-llama/llama-3.3-70b-instruct:free", "TEST_KEY_PLACEHOLDER", "");
         Assert.Contains("openrouter.ai", curl);

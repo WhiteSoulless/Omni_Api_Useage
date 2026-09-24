@@ -74,27 +74,38 @@ public partial class FreeModelsViewModel : ObservableObject
             Description = "Mistral AI'nın Mixture of Experts mimarisi. Çok dilli görevlerde ve mantıksal sorularda yüksek başarı."
         });
 
-        // 2. Google Gemini Free Tier
+        // 2. Google Gemini Free Tier (Updated 2026 Models)
         FreeModelsList.Add(new ModelInfo
         {
-            Id = "gemini-2.0-flash",
-            DisplayName = "Google Gemini 2.0 Flash",
+            Id = "gemini-3.6-flash",
+            DisplayName = "Google Gemini 3.6 Flash (Resmi Tavsiye)",
             Provider = "Google Gemini",
-            SpeedRating = "🚀 Yeni Nesil Hızlı (~180 tok/sn)",
+            SpeedRating = "🚀 Ultra Hızlı (~250 tok/sn)",
             IsFree = true,
             ContextWindow = "1M token",
-            Description = "Google'ın en yeni 2. nesil hızlı mimarisi. Geliştiriciler için AI Studio üzerinden ücretsiz kota ile sunulur."
+            Description = "Google'ın resmi olarak önerdiği 3. nesil en güncel hızlı mimari. Google AI Studio üzerinden ücretsiz kota ile sunulur."
         });
 
         FreeModelsList.Add(new ModelInfo
         {
-            Id = "gemini-1.5-flash",
-            DisplayName = "Google Gemini 1.5 Flash",
+            Id = "gemini-flash-latest",
+            DisplayName = "Google Gemini Flash (Latest)",
             Provider = "Google Gemini",
-            SpeedRating = "🚀 Yüksek Hız (~150 tok/sn)",
+            SpeedRating = "🔄 Daima En Güncel",
             IsFree = true,
-            ContextWindow = "1M token devasa bağlam",
-            Description = "Büyük belgeler, PDF'ler ve uzun kod tabanlarını tek seferde inceleyebilen 1 milyon token bağlamlı ücretsiz model."
+            ContextWindow = "1M token",
+            Description = "Google'ın en son kararlı Flash sürümüne otomatik bağlanan, model adı değişse bile kesintisiz çalışan model."
+        });
+
+        FreeModelsList.Add(new ModelInfo
+        {
+            Id = "gemini-2.5-flash",
+            DisplayName = "Google Gemini 2.5 Flash",
+            Provider = "Google Gemini",
+            SpeedRating = "⚡ Kararlı & Yüksek Hız",
+            IsFree = true,
+            ContextWindow = "1M token",
+            Description = "Kararlı 2.5 serisi hızlı model. Büyük belgeler ve hızlı sohbet için optimize edilmiştir."
         });
 
         // 3. OpenRouter Free Models

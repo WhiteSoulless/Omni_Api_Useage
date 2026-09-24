@@ -23,7 +23,7 @@ public class KeyValidatorService
     {
         return provider switch
         {
-            "Google Gemini" => new List<string> { "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro" },
+            "Google Gemini" => new List<string> { "gemini-3.6-flash", "gemini-flash-latest", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite" },
             "Groq" => new List<string> { "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it" },
             "OpenAI" => new List<string> { "gpt-4o", "gpt-4o-mini", "o1-mini", "gpt-4-turbo" },
             "DeepSeek" => new List<string> { "deepseek-chat", "deepseek-reasoner" },

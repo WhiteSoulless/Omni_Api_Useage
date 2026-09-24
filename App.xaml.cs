@@ -6,6 +6,8 @@ namespace OmniKeyStudio;
 
 public partial class App : Application
 {
+    private ChatPlaygroundViewModel? _chatPlaygroundVm;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -23,6 +25,8 @@ public partial class App : Application
         var freeModelsVm = new FreeModelsViewModel(llmService, storageService);
         var codeVaultVm = new CodeVaultViewModel(storageService, codeGenService);
 
+        _chatPlaygroundVm = chatPlaygroundVm;
+
         var mainVm = new MainViewModel(keyManagerVm, chatPlaygroundVm, freeModelsVm, codeVaultVm);
 
         var mainWindow = new MainWindow
@@ -31,5 +35,12 @@ public partial class App : Application
         };
 
         mainWindow.Show();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        // Kapanışta API ile yapılan tüm sohbet, arama ve oturum verilerini bellekten tamamen temizle
+        _chatPlaygroundVm?.ClearChatSession();
+        base.OnExit(e);
     }
 }

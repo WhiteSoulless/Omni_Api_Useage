@@ -194,6 +194,16 @@ public class LlmClientService
         }
 
         string cleanModel = model.StartsWith("models/") ? model["models/".Length..] : model;
+        // Automatic migration for deprecated Gemini models (e.g. gemini-2.0-flash -> gemini-3.6-flash)
+        if (cleanModel == "gemini-2.0-flash" || cleanModel == "gemini-1.5-flash" || cleanModel == "gemini-1.0-pro")
+        {
+            cleanModel = "gemini-3.6-flash";
+        }
+        else if (cleanModel == "gemini-1.5-pro")
+        {
+            cleanModel = "gemini-2.5-pro";
+        }
+
         string endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{cleanModel}:streamGenerateContent?key={Uri.EscapeDataString(apiKey)}&alt=sse";
 
         var contents = new List<object>();

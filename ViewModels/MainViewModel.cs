@@ -16,7 +16,7 @@ public partial class MainViewModel : ObservableObject
     private int _selectedTabIndex;
 
     [ObservableProperty]
-    private string _globalStatus = "OmniKey AI Studio Hazır • Tüm API Anahtarlarınız Güvenli DPAPI Kasasında Saklanır";
+    private string _globalStatus = "OmniKey AI Studio v2 Hazır • Tüm API Anahtarlarınız Güvenli DPAPI Kasasında Saklanır";
 
     public MainViewModel(
         KeyManagerViewModel keyManager,

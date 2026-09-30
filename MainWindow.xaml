@@ -7,7 +7,7 @@
         xmlns:viewmodels="clr-namespace:OmniKeyStudio.ViewModels"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=viewmodels:MainViewModel}"
-        Title="OmniKey AI Studio - Akıllı API Anahtar Yöneticisi &amp; Hızlı Model Merkezi" 
+        Title="OmniKey AI Studio v2 - Akıllı API Anahtar Yöneticisi &amp; Hızlı Model Merkezi" 
         Height="780" Width="1160" MinHeight="680" MinWidth="980"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BackgroundDarkBrush}">
@@ -34,7 +34,12 @@
                         <TextBlock Text="⚡" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="OmniKey AI Studio" FontWeight="Bold" FontSize="17" Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="OmniKey AI Studio" FontWeight="Bold" FontSize="17" Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <Border CornerRadius="4" Padding="5,1" Margin="6,0,0,0" Background="#1E3A8A" VerticalAlignment="Center">
+                                <TextBlock Text="v2" FontSize="10" FontWeight="Bold" Foreground="#60A5FA"/>
+                            </Border>
+                        </StackPanel>
                         <TextBlock Text="Akıllı Anahtar Tespiti • Ücretsiz Hızlı Modeller • Kod Kasası" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                     </StackPanel>
                 </StackPanel>
